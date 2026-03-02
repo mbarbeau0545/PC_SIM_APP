@@ -113,6 +113,20 @@ INJECT_CAN 0 0x1810A57B 8 1 1 1 1 1 1 1 1
 python tools/pc_sim/pc_sim_ihm.py
 ```
 
+Fonctionnalités principales:
+
+- Onglet `I/O`: set/get analog, PWM, digital in/out, freq in, encodeurs.
+- Onglet `CAN`: injection CAN RX + visualisation des trames CAN TX émises par la simulation STM32.
+- Onglet `Encoders`: modes de simulation par encodeur:
+`manual`, `ramp`, `constant_speed`, `trapezoidal`, `sinusoidal`, `script`, `pulse_based`.
+- Défauts/robustesse encodeur: freeze, inversion speed, spikes, offset jump, bruit, quantification, jitter.
+
+Persistance configuration encodeurs:
+
+- Fichier: `tools/pc_sim/pc_sim_encoder_config.json`
+- Chargé automatiquement au démarrage de `pc_sim_ihm.py`
+- Sauvegardé via bouton `Save Config` et à la fermeture de l'IHM
+
 ## Client Python
 
 ```bash

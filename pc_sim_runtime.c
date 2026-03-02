@@ -1,6 +1,7 @@
 #include "pc_sim_runtime.h"
 
 #include <stdint.h>
+#include <math.h>
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -34,6 +35,24 @@ t_sPCSIM_CanTxLog g_pcSimCanTxLog_s;
 t_sPCSIM_FastTimer g_pcSimFastTimer_s;
 
 static uint64_t g_startTickMs_u64;
+static t_uint32 g_lastRuntimeTickMs_u32;
+static t_float32 g_pcSimPwmPulseFrac_af32[PCSIM_DIM_OR_ONE(FMKIO_OUTPUT_SIGPWM_NB)];
+
+#if (FMKIO_OUTPUT_SIGPWM_NB > 0U)
+#define PCSIM_PWM_SLOT_NB FMKIO_OUTPUT_SIGPWM_NB
+#else
+#define PCSIM_PWM_SLOT_NB 1U
+#endif
+
+#if (FMKIO_INPUT_ENCODER_NB > 0U)
+#define PCSIM_ENCODER_SLOT_NB FMKIO_INPUT_ENCODER_NB
+#else
+#define PCSIM_ENCODER_SLOT_NB 1U
+#endif
+
+#define PCSIM_PI_F 3.1415926f
+#define PCSIM_ENCODER_PULSE_PER_REV_F 3200.0f
+#define PCSIM_ENCODER_MRAD_PER_PULSE_F ((2.0f * PCSIM_PI_F * 1000.0f) / PCSIM_ENCODER_PULSE_PER_REV_F)
 
 static t_uint32 s_getTickMs(void)
 {
@@ -60,6 +79,75 @@ void PCSIM_InternalSleepMs(t_uint32 delayMs_u32)
 #else
     usleep((useconds_t)(delayMs_u32 * 1000U));
 #endif
+}
+
+static void s_stepPulseDrivenEncoder(t_float32 dtSec_f32)
+{
+    t_uint16 pwm_u16;
+    t_uint16 enc_u16;
+    t_float32 signedFreq_f32;
+    t_float32 absFreq_f32;
+    t_float32 pulsesToEmit_f32;
+    t_uint16 emitted_u16;
+    t_float32 deltaPos_mrad_f32;
+
+    if (dtSec_f32 <= 0.0f)
+    {
+        return;
+    }
+
+    for (enc_u16 = 0U; enc_u16 < PCSIM_ENCODER_SLOT_NB; enc_u16++)
+    {
+        g_pcSimEncSpeed_af32[enc_u16] = 0.0f;
+    }
+
+    for (pwm_u16 = 0U; pwm_u16 < PCSIM_PWM_SLOT_NB; pwm_u16++)
+    {
+        if (g_pcSimPwmPulses_au16[pwm_u16] == 0U)
+        {
+            g_pcSimPwmPulseFrac_af32[pwm_u16] = 0.0f;
+            continue;
+        }
+
+        signedFreq_f32 = g_pcSimPwmFreq_af32[pwm_u16];
+        absFreq_f32 = (t_float32)fabs((double)signedFreq_f32);
+        if (absFreq_f32 <= 0.01f)
+        {
+            continue;
+        }
+
+        pulsesToEmit_f32 = (absFreq_f32 * dtSec_f32) + g_pcSimPwmPulseFrac_af32[pwm_u16];
+        emitted_u16 = (t_uint16)pulsesToEmit_f32;
+        if (emitted_u16 > g_pcSimPwmPulses_au16[pwm_u16])
+        {
+            emitted_u16 = g_pcSimPwmPulses_au16[pwm_u16];
+        }
+        g_pcSimPwmPulseFrac_af32[pwm_u16] = pulsesToEmit_f32 - (t_float32)emitted_u16;
+
+        if (emitted_u16 == 0U)
+        {
+            continue;
+        }
+
+        g_pcSimPwmPulses_au16[pwm_u16] = (t_uint16)(g_pcSimPwmPulses_au16[pwm_u16] - emitted_u16);
+        enc_u16 = (t_uint16)(pwm_u16 % PCSIM_ENCODER_SLOT_NB);
+
+        if (signedFreq_f32 >= 0.0f)
+        {
+            g_pcSimEncDir_ae[enc_u16] = FMKIO_ENCODER_DIR_FORWARD;
+            deltaPos_mrad_f32 = (t_float32)emitted_u16 * PCSIM_ENCODER_MRAD_PER_PULSE_F;
+            g_pcSimEncSpeed_af32[enc_u16] += absFreq_f32 * PCSIM_ENCODER_MRAD_PER_PULSE_F;
+        }
+        else
+        {
+            g_pcSimEncDir_ae[enc_u16] = FMKIO_ENCODER_DIR_BACKWARD;
+            deltaPos_mrad_f32 = (t_float32)emitted_u16 * (-PCSIM_ENCODER_MRAD_PER_PULSE_F);
+            g_pcSimEncSpeed_af32[enc_u16] -= absFreq_f32 * PCSIM_ENCODER_MRAD_PER_PULSE_F;
+        }
+
+        g_pcSimEncAbs_af32[enc_u16] += deltaPos_mrad_f32;
+        g_pcSimEncRel_af32[enc_u16] += deltaPos_mrad_f32;
+    }
 }
 
 void PCSIM_RuntimeInit(void)
@@ -110,6 +198,11 @@ void PCSIM_RuntimeInit(void)
     g_pcSimCanTxLog_s.head_u16 = 0U;
     g_pcSimCanTxLog_s.tail_u16 = 0U;
     g_pcSimCanTxLog_s.count_u16 = 0U;
+    g_lastRuntimeTickMs_u32 = 0U;
+    for (idx_u16 = 0U; idx_u16 < PCSIM_PWM_SLOT_NB; idx_u16++)
+    {
+        g_pcSimPwmPulseFrac_af32[idx_u16] = 0.0f;
+    }
 
     g_pcSimFastTimer_s.configured_b = FALSE;
     g_pcSimFastTimer_s.running_b = FALSE;
@@ -120,5 +213,16 @@ void PCSIM_RuntimeInit(void)
 
 void PCSIM_RuntimeStep(void)
 {
+    t_uint32 nowTick_u32 = s_getTickMs();
+    t_float32 dtSec_f32;
+
+    if (g_lastRuntimeTickMs_u32 == 0U)
+    {
+        g_lastRuntimeTickMs_u32 = nowTick_u32;
+    }
+    dtSec_f32 = (t_float32)(nowTick_u32 - g_lastRuntimeTickMs_u32) / 1000.0f;
+    g_lastRuntimeTickMs_u32 = nowTick_u32;
+
+    s_stepPulseDrivenEncoder(dtSec_f32);
     (void)FMKTIM_Cyclic();
 }
