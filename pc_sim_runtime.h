@@ -9,7 +9,7 @@ extern "C" {
 
 #define PCSIM_DIM_OR_ONE(x) (((x) > 0U) ? (x) : 1U)
 #define PCSIM_CAN_RX_REG_MAX 256U
-#define PCSIM_CAN_TX_LOG_MAX 256U
+#define PCSIM_CAN_TX_LOG_MAX 4096U
 
 typedef struct
 {
@@ -23,6 +23,7 @@ typedef struct
 typedef struct
 {
     t_bool used_b;
+    t_eFMKFDCAN_NodeList node_e;
     t_sFMKFDCAN_RxItemEventCfg cfg_s;
 } t_sPCSIM_CanRxReg;
 
@@ -46,6 +47,7 @@ extern t_float32 g_pcSimAnalogValues_af32[FMKIO_INPUT_SIGANA_NB];
 extern t_uint16 g_pcSimPwmDuty_au16[FMKIO_OUTPUT_SIGPWM_NB];
 extern t_float32 g_pcSimPwmFreq_af32[FMKIO_OUTPUT_SIGPWM_NB];
 extern t_uint16 g_pcSimPwmPulses_au16[FMKIO_OUTPUT_SIGPWM_NB];
+extern t_cbFMKIO_PulseEvent *g_pcSimPwmPulseEndCb_apcb[FMKIO_OUTPUT_SIGPWM_NB];
 extern t_eFMKIO_DigValue g_pcSimOutDig_ae[FMKIO_OUTPUT_SIGDIG_NB];
 extern t_eFMKIO_DigValue g_pcSimInDig_ae[FMKIO_INPUT_SIGDIG_NB];
 extern t_float32 g_pcSimInFreq_af32[PCSIM_DIM_OR_ONE(FMKIO_INPUT_SIGFREQ_NB)];
@@ -56,10 +58,15 @@ extern t_eFMKIO_EcdrDir g_pcSimEncDir_ae[PCSIM_DIM_OR_ONE(FMKIO_INPUT_ENCODER_NB
 
 extern t_sPCSIM_CanRxReg g_pcSimCanRxReg_as[PCSIM_CAN_RX_REG_MAX];
 extern t_sPCSIM_CanTxLog g_pcSimCanTxLog_s;
+extern t_sPCSIM_CanTxLog g_pcSimCanBrokerTxLog_s;
 extern t_sPCSIM_FastTimer g_pcSimFastTimer_s;
 
 void PCSIM_RuntimeInit(void);
 void PCSIM_RuntimeStep(void);
+void PCSIM_RuntimeNotifyPwmPulsesSet(t_eFMKIO_OutPwmSig signal_e);
+t_eReturnCode PCSIM_RuntimeSetEncoderPulseMapping(t_eFMKIO_InEcdrSignals encoder_e,
+                                                  t_eFMKIO_OutPwmSig pwm_e,
+                                                  t_float32 pulsesPerRev_f32);
 
 t_uint32 PCSIM_GetTickMs(void);
 

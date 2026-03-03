@@ -9,7 +9,7 @@ static t_cbFMKSRL_TransmitMsgEvent *g_pcSimTxCb_apcb[FMKSRL_SERIAL_LINE_NB];
 static void s_printTxFrame(t_eFMKSRL_SerialLine line_e, t_uint8 *data_pu8, t_uint16 size_u16)
 {
     t_uint16 idx_u16;
-    printf("[FMKSRL TX L%u] ", (unsigned)line_e);
+    printf("[L%u] ", (unsigned)line_e);
     for (idx_u16 = 0U; idx_u16 < size_u16; idx_u16++)
     {
         printf("%02X", data_pu8[idx_u16]);
@@ -111,7 +111,7 @@ void FMKSRL_LogUartSend(t_eFMKSRL_SerialLine f_SrlLine_e, const t_char *fmt, ...
         return;
     }
 
-    printf("[FMKSRL LOG L%u] ", (unsigned)f_SrlLine_e);
+    printf("L%u] ", (unsigned)f_SrlLine_e);
     va_start(args, fmt);
     vprintf(fmt, args);
     va_end(args);

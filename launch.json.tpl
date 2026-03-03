@@ -48,43 +48,7 @@
             ]
         },
         {
-            "name": "PC_SIM Debug (default)",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${workspaceFolder}/.pio/build/pc_sim_debug/program.exe",
-            "args": [
-                "--udp-port",
-                "19090",
-                "--sleep-ms",
-                "1"
-            ],
-            "cwd": "${workspaceFolder}",
-            "MIMode": "gdb",
-            "miDebuggerPath": "C:/msys64/ucrt64/bin/gdb.exe",
-            "externalConsole": true,
-            "stopAtEntry": false,
-            "preLaunchTask": "pc_sim_debug_prepare",
-            "postDebugTask": "pc_sim_debug_kill",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                },
-                {
-                    "description": "Allow pending breakpoints",
-                    "text": "-gdb-set breakpoint pending on",
-                    "ignoreFailures": true
-                },
-                {
-                    "description": "Enable async mode",
-                    "text": "-gdb-set mi-async on",
-                    "ignoreFailures": true
-                }
-            ]
-        },
-        {
-            "name": "PC_SIM Debug (CAN scenario)",
+            "name": "PC_SIM Debug",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/.pio/build/pc_sim_debug/program.exe",

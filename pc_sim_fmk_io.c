@@ -1,18 +1,25 @@
 #include "pc_sim_runtime.h"
 
 #include <string.h>
+#include <math.h>
 
-#if (FMKIO_INPUT_SIGFREQ_NB > 0U)
-#define PCSIM_IN_FREQ_SLOT_NB FMKIO_INPUT_SIGFREQ_NB
-#else
-#define PCSIM_IN_FREQ_SLOT_NB 1U
-#endif
+#define PCSIM_IN_FREQ_SLOT_NB (((FMKIO_INPUT_SIGFREQ_NB) > 0U) ? (FMKIO_INPUT_SIGFREQ_NB) : 1U)
+#define PCSIM_ENCODER_SLOT_NB (((FMKIO_INPUT_ENCODER_NB) > 0U) ? (FMKIO_INPUT_ENCODER_NB) : 1U)
+#define PCSIM_PI_MRAD_F 3141.5926f
+#define PCSIM_2PI_MRAD_F (2.0f * PCSIM_PI_MRAD_F)
 
-#if (FMKIO_INPUT_ENCODER_NB > 0U)
-#define PCSIM_ENCODER_SLOT_NB FMKIO_INPUT_ENCODER_NB
-#else
-#define PCSIM_ENCODER_SLOT_NB 1U
-#endif
+static t_float32 s_WrapToPi_mrad(t_float32 x_mrad_f32)
+{
+    while (x_mrad_f32 >= PCSIM_PI_MRAD_F)
+    {
+        x_mrad_f32 -= PCSIM_2PI_MRAD_F;
+    }
+    while (x_mrad_f32 < -PCSIM_PI_MRAD_F)
+    {
+        x_mrad_f32 += PCSIM_2PI_MRAD_F;
+    }
+    return x_mrad_f32;
+}
 
 const t_float32 *PCSIM_GetAnalogSnapshot(void)
 {
@@ -98,12 +105,13 @@ t_eReturnCode PCSIM_GetInputFrequency(t_eFMKIO_InFreqSig signal, t_float32 *valu
 
 t_eReturnCode PCSIM_SetEncoderPosition(t_eFMKIO_InEcdrSignals signal, t_float32 absolute, t_float32 relative)
 {
+    (void)absolute;
     if (signal >= PCSIM_ENCODER_SLOT_NB)
     {
         return RC_ERROR_PARAM_INVALID;
     }
-    g_pcSimEncAbs_af32[signal] = absolute;
     g_pcSimEncRel_af32[signal] = relative;
+    g_pcSimEncAbs_af32[signal] = s_WrapToPi_mrad(relative);
     return RC_OK;
 }
 
@@ -187,6 +195,7 @@ t_eReturnCode PCSIM_SetPwmPulses(t_eFMKIO_OutPwmSig signal, t_uint16 pulses)
         return RC_ERROR_PARAM_INVALID;
     }
     g_pcSimPwmPulses_au16[signal] = pulses;
+    PCSIM_RuntimeNotifyPwmPulsesSet(signal);
     return RC_OK;
 }
 
@@ -303,6 +312,7 @@ t_eReturnCode FMKIO_Set_InEcdrCalibOffset(t_eFMKIO_InEcdrSignals f_InEncdr_e, t_
         return RC_ERROR_PARAM_INVALID;
     }
     g_pcSimEncRel_af32[f_InEncdr_e] = f_calibValue_mrad_f32;
+    g_pcSimEncAbs_af32[f_InEncdr_e] = s_WrapToPi_mrad(g_pcSimEncRel_af32[f_InEncdr_e]);
     return RC_OK;
 }
 
@@ -314,12 +324,12 @@ t_eReturnCode FMKIO_Set_OutPwmSigCfg(t_eFMKIO_OutPwmSig f_signal_e,
 {
     (void)f_sigPwmCfg_s;
     (void)f_sigCtrlPrm_s;
-    (void)f_pulseEvnt_pcb;
     (void)f_sigErr_cb;
     if (f_signal_e >= FMKIO_OUTPUT_SIGPWM_NB)
     {
         return RC_ERROR_PARAM_INVALID;
     }
+    g_pcSimPwmPulseEndCb_apcb[f_signal_e] = f_pulseEvnt_pcb;
     return RC_OK;
 }
 
@@ -382,12 +392,15 @@ t_eReturnCode FMKIO_Get_InEcdrPositionValue(t_eFMKIO_InEcdrSignals f_signal_e,
     {
         return RC_ERROR_PARAM_INVALID;
     }
-    if ((f_absolutePos_pf32 == NULL) || (f_relativePos_pf32 == NULL))
+    if ((f_absolutePos_pf32 != NULL) )
     {
-        return RC_ERROR_PTR_NULL;
+        *f_absolutePos_pf32 = g_pcSimEncAbs_af32[f_signal_e];
     }
-    *f_absolutePos_pf32 = g_pcSimEncAbs_af32[f_signal_e];
-    *f_relativePos_pf32 = g_pcSimEncRel_af32[f_signal_e];
+    if (f_relativePos_pf32 != NULL)
+    {
+        *f_relativePos_pf32 = g_pcSimEncRel_af32[f_signal_e];
+    }
+    
     return RC_OK;
 }
 
@@ -467,6 +480,24 @@ t_eReturnCode FMKIO_Set_OutPwmSigPulses(t_eFMKIO_OutPwmSig f_signal_e,
                                         t_uint16 f_pulses_u16)
 {
     t_eReturnCode ret_e;
+    t_sint16 signedPulses_s16;
+    t_uint16 pulsesAbs_u16;
+
+    /* Compatibility path: if caller passed signed pulses through uint16 cast,
+     * recover sign from int16 representation and mirror it on frequency sign.
+     */
+    signedPulses_s16 = (t_sint16)f_pulses_u16;
+    if (signedPulses_s16 < (t_sint16)0)
+    {
+        pulsesAbs_u16 = (t_uint16)(-signedPulses_s16);
+        f_frequency_f32 = -(t_float32)fabs((double)f_frequency_f32);
+    }
+    else
+    {
+        pulsesAbs_u16 = (t_uint16)signedPulses_s16;
+        f_frequency_f32 = (t_float32)fabs((double)f_frequency_f32);
+    }
+
     ret_e = PCSIM_SetPwmFrequency(f_signal_e, f_frequency_f32);
     if (ret_e == RC_OK)
     {
@@ -474,7 +505,7 @@ t_eReturnCode FMKIO_Set_OutPwmSigPulses(t_eFMKIO_OutPwmSig f_signal_e,
     }
     if (ret_e == RC_OK)
     {
-        ret_e = PCSIM_SetPwmPulses(f_signal_e, f_pulses_u16);
+        ret_e = PCSIM_SetPwmPulses(f_signal_e, pulsesAbs_u16);
     }
     return ret_e;
 }

@@ -21,6 +21,15 @@ typedef struct
     t_uint8 data_au8[64];
 } t_sPCSIM_CanTxFrame;
 
+typedef struct
+{
+    t_eFMKFDCAN_NodeList node_e;
+    t_uint32 identifier_u32;
+    t_uint32 mask_u32;
+    t_eFMKFDCAN_IdentifierType idType_e;
+    t_eFMKFDCAN_FramePurpose purpose_e;
+} t_sPCSIM_CanRxRegInfo;
+
 void PCSIM_RuntimeInit(void);
 void PCSIM_RuntimeStep(void);
 
@@ -49,6 +58,11 @@ t_eReturnCode PCSIM_InjectCanFrame(t_eFMKFDCAN_NodeList node,
 t_uint16 PCSIM_GetCanTxCount(void);
 t_eReturnCode PCSIM_PopCanTxFrame(t_sPCSIM_CanTxFrame *frame);
 t_eReturnCode PCSIM_ClearCanTxFrames(void);
+t_uint16 PCSIM_GetCanBrokerTxCount(void);
+t_eReturnCode PCSIM_PopCanBrokerTxFrame(t_sPCSIM_CanTxFrame *frame);
+t_eReturnCode PCSIM_ClearCanBrokerTxFrames(void);
+t_uint16 PCSIM_GetCanRxRegCount(void);
+t_eReturnCode PCSIM_GetCanRxRegAt(t_uint16 index_u16, t_sPCSIM_CanRxRegInfo *info_ps);
 
 /* Snapshot helpers */
 const t_float32 *PCSIM_GetAnalogSnapshot(void);
