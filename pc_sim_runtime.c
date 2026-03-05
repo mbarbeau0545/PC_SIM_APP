@@ -1,14 +1,29 @@
-#include "pc_sim_runtime.h"
-
-#include <stdint.h>
-#include <math.h>
-
 #if defined(_WIN32)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
+#ifdef LPTR
+#undef LPTR
+#endif
+#ifdef ERROR
+#undef ERROR
+#endif
+#ifdef TRUE
+#undef TRUE
+#endif
+#ifdef FALSE
+#undef FALSE
+#endif
 #else
 #include <time.h>
 #include <unistd.h>
 #endif
+
+#include "pc_sim_runtime.h"
+
+#include <stdint.h>
+#include <math.h>
 
 t_eCyclicModState g_pcSimCpuState_e = STATE_CYCLIC_OPE;
 t_eCyclicModState g_pcSimTimState_e = STATE_CYCLIC_OPE;
@@ -43,6 +58,7 @@ static t_uint32 g_lastRuntimeTickMs_u32;
 static t_float32 g_pcSimPwmPulseFrac_af32[PCSIM_DIM_OR_ONE(FMKIO_OUTPUT_SIGPWM_NB)];
 static t_uint16 g_pcSimEncLinkedPwm_au16[PCSIM_ENCODER_SLOT_NB];
 static t_float32 g_pcSimEncPulsePerRev_af32[PCSIM_ENCODER_SLOT_NB];
+static t_uint16 g_pcSimEncLinkedDirDig_au16[PCSIM_ENCODER_SLOT_NB];
 
 #define PCSIM_PI_F 3.1415926f
 #define PCSIM_ENCODER_PULSE_PER_REV_F 3200.0f
@@ -94,13 +110,14 @@ static void s_stepPulseDrivenEncoder(t_float32 dtSec_f32)
     t_uint16 pwm_u16;
     t_uint16 enc_u16;
     t_uint16 prevPulses_u16;
-    t_float32 signedFreq_f32;
     t_float32 absFreq_f32;
     t_float32 pulsesToEmit_f32;
     t_uint16 emitted_u16;
     t_float32 deltaPos_mrad_f32;
     t_float32 ppr_f32;
     t_float32 mradPerPulse_f32;
+    t_float32 sign_f32;
+    t_uint16 dirDig_u16;
 
     if (dtSec_f32 <= 0.0f)
     {
@@ -121,8 +138,7 @@ static void s_stepPulseDrivenEncoder(t_float32 dtSec_f32)
             continue;
         }
 
-        signedFreq_f32 = g_pcSimPwmFreq_af32[pwm_u16];
-        absFreq_f32 = (t_float32)fabs((double)signedFreq_f32);
+        absFreq_f32 = (t_float32)fabs((double)g_pcSimPwmFreq_af32[pwm_u16]);
         if (absFreq_f32 <= 0.01f)
         {
             continue;
@@ -155,8 +171,17 @@ static void s_stepPulseDrivenEncoder(t_float32 dtSec_f32)
                 continue;
             }
             mradPerPulse_f32 = (2.0f * PCSIM_PI_F * 1000.0f) / ppr_f32;
+            dirDig_u16 = g_pcSimEncLinkedDirDig_au16[enc_u16];
+            if (dirDig_u16 < FMKIO_OUTPUT_SIGDIG_NB)
+            {
+                sign_f32 = (g_pcSimOutDig_ae[dirDig_u16] == FMKIO_DIG_VALUE_HIGH) ? 1.0f : -1.0f;
+            }
+            else
+            {
+                sign_f32 = (g_pcSimPwmFreq_af32[pwm_u16] >= 0.0f) ? 1.0f : -1.0f;
+            }
 
-            if (signedFreq_f32 >= 0.0f)
+            if (sign_f32 > 0.0f)
             {
                 g_pcSimEncDir_ae[enc_u16] = FMKIO_ENCODER_DIR_FORWARD;
                 deltaPos_mrad_f32 = (t_float32)emitted_u16 * mradPerPulse_f32;
@@ -244,6 +269,7 @@ void PCSIM_RuntimeInit(void)
     {
         g_pcSimEncPulsePerRev_af32[idx_u16] = PCSIM_ENCODER_PULSE_PER_REV_F;
         g_pcSimEncLinkedPwm_au16[idx_u16] = (t_uint16)(idx_u16 % PCSIM_PWM_SLOT_NB);
+        g_pcSimEncLinkedDirDig_au16[idx_u16] = (t_uint16)(idx_u16 % PCSIM_DIM_OR_ONE(FMKIO_OUTPUT_SIGDIG_NB));
     }
 
     g_pcSimFastTimer_s.configured_b = FALSE;
@@ -255,7 +281,8 @@ void PCSIM_RuntimeInit(void)
 
 t_eReturnCode PCSIM_RuntimeSetEncoderPulseMapping(t_eFMKIO_InEcdrSignals encoder_e,
                                                   t_eFMKIO_OutPwmSig pwm_e,
-                                                  t_float32 pulsesPerRev_f32)
+                                                  t_float32 pulsesPerRev_f32,
+                                                  t_eFMKIO_OutDigSig dirDig_e)
 {
     if ((encoder_e >= FMKIO_INPUT_ENCODER_NB)
         || (pwm_e >= FMKIO_OUTPUT_SIGPWM_NB)
@@ -266,6 +293,7 @@ t_eReturnCode PCSIM_RuntimeSetEncoderPulseMapping(t_eFMKIO_InEcdrSignals encoder
 
     g_pcSimEncLinkedPwm_au16[(t_uint16)encoder_e] = (t_uint16)pwm_e;
     g_pcSimEncPulsePerRev_af32[(t_uint16)encoder_e] = pulsesPerRev_f32;
+    g_pcSimEncLinkedDirDig_au16[(t_uint16)encoder_e] = (t_uint16)dirDig_e;
     return RC_OK;
 }
 

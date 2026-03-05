@@ -384,21 +384,21 @@ t_eReturnCode FMKIO_Get_InDigSigValue(t_eFMKIO_InDigSig f_signal_e, t_eFMKIO_Dig
 
 t_eReturnCode FMKIO_Get_InEcdrPositionValue(t_eFMKIO_InEcdrSignals f_signal_e,
                                             t_eFMKIO_EcdrValFormat f_format_e,
-                                            t_float32 *f_absolutePos_pf32,
-                                            t_float32 *f_relativePos_pf32)
+                                            t_float32 *f_angleWrapped_pf32,
+                                            t_float32 *f_angleMultiturn_pf32)
 {
     (void)f_format_e;
     if (f_signal_e >= PCSIM_ENCODER_SLOT_NB)
     {
         return RC_ERROR_PARAM_INVALID;
     }
-    if ((f_absolutePos_pf32 != NULL) )
+    if ((f_angleWrapped_pf32 != NULL) )
     {
-        *f_absolutePos_pf32 = g_pcSimEncAbs_af32[f_signal_e];
+        *f_angleWrapped_pf32 = g_pcSimEncAbs_af32[f_signal_e];
     }
-    if (f_relativePos_pf32 != NULL)
+    if (f_angleMultiturn_pf32 != NULL)
     {
-        *f_relativePos_pf32 = g_pcSimEncRel_af32[f_signal_e];
+        *f_angleMultiturn_pf32 = g_pcSimEncRel_af32[f_signal_e];
     }
     
     return RC_OK;

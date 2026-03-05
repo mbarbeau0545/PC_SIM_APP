@@ -66,7 +66,8 @@ void PCSIM_RuntimeStep(void);
 void PCSIM_RuntimeNotifyPwmPulsesSet(t_eFMKIO_OutPwmSig signal_e);
 t_eReturnCode PCSIM_RuntimeSetEncoderPulseMapping(t_eFMKIO_InEcdrSignals encoder_e,
                                                   t_eFMKIO_OutPwmSig pwm_e,
-                                                  t_float32 pulsesPerRev_f32);
+                                                  t_float32 pulsesPerRev_f32,
+                                                  t_eFMKIO_OutDigSig dirDig_e);
 
 t_uint32 PCSIM_GetTickMs(void);
 

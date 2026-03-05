@@ -1,3 +1,36 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <signal.h>
+
+#if defined(_WIN32)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#pragma comment(lib, "Ws2_32.lib")
+#ifdef LPTR
+#undef LPTR
+#endif
+#ifdef ERROR
+#undef ERROR
+#endif
+#ifdef TRUE
+#undef TRUE
+#endif
+#ifdef FALSE
+#undef FALSE
+#endif
+#else
+#include <arpa/inet.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#endif
+
 #include "pc_sim_runtime.h"
 #include "APP_CTRL/APP_SYS/Src/APP_SYS.h"
 
@@ -14,24 +47,6 @@
 #if !defined(PCSIM_CL42T_HEADER_FOUND)
 t_eReturnCode CL42T_Init(void);
 t_eReturnCode CL42T_Cyclic(void);
-#endif
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <signal.h>
-
-#if defined(_WIN32)
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#pragma comment(lib, "Ws2_32.lib")
-#else
-#include <arpa/inet.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
 #endif
 
 #define PCSIM_DEFAULT_UDP_PORT 19090
@@ -58,7 +73,7 @@ static void s_printUsage(void)
     printf("  --udp-port <port>   UDP command port (default 19090)\n");
     printf("  --sleep-ms <ms>     Main-loop sleep in ms (default 1)\n");
     printf("  --ana <id> <value>  Set startup analog value (repeatable)\n");
-    printf("  --enc-map <enc_idx> <pwm_idx> <pulses_per_rev>  Bind encoder to PWM pulse source (repeatable)\n");
+    printf("  --enc-map <enc_idx> <pwm_idx> <pulses_per_rev> [dir_dig_idx]  Bind encoder to PWM pulse source and optional direction pin (repeatable)\n");
     printf("  --help              Show this help\n");
 }
 
@@ -121,19 +136,27 @@ static int s_applyOptions(int argc, char **argv, t_sPcSimOptions *opt_ps)
             t_eFMKIO_InEcdrSignals enc_e = (t_eFMKIO_InEcdrSignals)atoi(argv[++idx_s32]);
             t_eFMKIO_OutPwmSig pwm_e = (t_eFMKIO_OutPwmSig)atoi(argv[++idx_s32]);
             t_float32 ppr_f32 = (t_float32)atof(argv[++idx_s32]);
-            t_eReturnCode ret_e = PCSIM_RuntimeSetEncoderPulseMapping(enc_e, pwm_e, ppr_f32);
+            t_eFMKIO_OutDigSig dirDig_e = (t_eFMKIO_OutDigSig)pwm_e;
+
+            if (((idx_s32 + 1) < argc) && (argv[idx_s32 + 1][0] != '-'))
+            {
+                dirDig_e = (t_eFMKIO_OutDigSig)atoi(argv[++idx_s32]);
+            }
+
+            t_eReturnCode ret_e = PCSIM_RuntimeSetEncoderPulseMapping(enc_e, pwm_e, ppr_f32, dirDig_e);
             if (ret_e != RC_OK)
             {
-                printf("PCSIM: invalid --enc-map values (enc=%u pwm=%u ppr=%.3f)\n",
+                printf("PCSIM: invalid --enc-map values (enc=%u pwm=%u ppr=%.3f dir=%u)\n",
                        (unsigned)enc_e,
                        (unsigned)pwm_e,
-                       (double)ppr_f32);
+                       (double)ppr_f32,
+                       (unsigned)dirDig_e);
             }
             continue;
         }
         if (strcmp(argv[idx_s32], "--enc-map") == 0)
         {
-            printf("PCSIM: missing value(s) for --enc-map, expected: --enc-map <enc_idx> <pwm_idx> <pulses_per_rev>\n");
+            printf("PCSIM: missing value(s) for --enc-map, expected: --enc-map <enc_idx> <pwm_idx> <pulses_per_rev> [dir_dig_idx]\n");
             continue;
         }
 
@@ -354,6 +377,7 @@ static void s_processCommand(pcsim_socket_t sock,
     char localCmd_ac[PCSIM_MAX_CMD_LEN];
     unsigned id_u32;
     int intVal_s32;
+    int f2_s32;
     float floatVal_f32;
     float f2_f32;
     t_eReturnCode ret_e;
@@ -481,11 +505,21 @@ static void s_processCommand(pcsim_socket_t sock,
         snprintf(reply_ac, sizeof(reply_ac), "OK RC %d\n", ret_e);
         s_sendReply(sock, clientAddr_ps, reply_ac);
     }
+    else if (sscanf(localCmd_ac, "SET_ENC_MAP %u %u %f %d", &id_u32, &intVal_s32, &floatVal_f32, &f2_s32) == 4)
+    {
+        ret_e = PCSIM_RuntimeSetEncoderPulseMapping((t_eFMKIO_InEcdrSignals)id_u32,
+                                                    (t_eFMKIO_OutPwmSig)intVal_s32,
+                                                    (t_float32)floatVal_f32,
+                                                    (t_eFMKIO_OutDigSig)f2_s32);
+        snprintf(reply_ac, sizeof(reply_ac), "OK RC %d\n", ret_e);
+        s_sendReply(sock, clientAddr_ps, reply_ac);
+    }
     else if (sscanf(localCmd_ac, "SET_ENC_MAP %u %u %f", &id_u32, &intVal_s32, &floatVal_f32) == 3)
     {
         ret_e = PCSIM_RuntimeSetEncoderPulseMapping((t_eFMKIO_InEcdrSignals)id_u32,
                                                     (t_eFMKIO_OutPwmSig)intVal_s32,
-                                                    (t_float32)floatVal_f32);
+                                                    (t_float32)floatVal_f32,
+                                                    (t_eFMKIO_OutDigSig)intVal_s32);
         snprintf(reply_ac, sizeof(reply_ac), "OK RC %d\n", ret_e);
         s_sendReply(sock, clientAddr_ps, reply_ac);
     }
