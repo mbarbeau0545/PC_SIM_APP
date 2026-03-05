@@ -913,7 +913,7 @@ int main(int argc, char **argv)
 {
     pcsim_socket_t serverSock;
     t_sPcSimOptions opt_s;
-    int parseRet_s32;
+    int parseRet_s32;//
 
     PCSIM_RuntimeInit();
     signal(SIGINT, s_signalHandler);
