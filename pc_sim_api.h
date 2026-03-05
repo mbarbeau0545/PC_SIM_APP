@@ -38,6 +38,7 @@ t_eReturnCode PCSIM_SetAnalogInput(t_eFMKIO_InAnaSig signal, t_float32 value);
 t_eReturnCode PCSIM_GetAnalogInput(t_eFMKIO_InAnaSig signal, t_float32 *value);
 t_eReturnCode PCSIM_SetInputDigital(t_eFMKIO_InDigSig signal, t_eFMKIO_DigValue value);
 t_eReturnCode PCSIM_GetInputDigital(t_eFMKIO_InDigSig signal, t_eFMKIO_DigValue *value);
+t_eReturnCode PCSIM_TriggerInputEvent(t_eFMKIO_InEvntSig signal);
 t_eReturnCode PCSIM_SetInputFrequency(t_eFMKIO_InFreqSig signal, t_float32 value);
 t_eReturnCode PCSIM_GetInputFrequency(t_eFMKIO_InFreqSig signal, t_float32 *value);
 t_eReturnCode PCSIM_SetEncoderPosition(t_eFMKIO_InEcdrSignals signal, t_float32 absolute, t_float32 relative);
@@ -48,8 +49,8 @@ t_eReturnCode PCSIM_SetPwmDuty(t_eFMKIO_OutPwmSig signal, t_uint16 duty);
 t_eReturnCode PCSIM_GetPwmDuty(t_eFMKIO_OutPwmSig signal, t_uint16 *duty);
 t_eReturnCode PCSIM_SetPwmFrequency(t_eFMKIO_OutPwmSig signal, t_float32 frequency);
 t_eReturnCode PCSIM_GetPwmFrequency(t_eFMKIO_OutPwmSig signal, t_float32 *frequency);
-t_eReturnCode PCSIM_SetPwmPulses(t_eFMKIO_OutPwmSig signal, t_uint16 pulses);
-t_eReturnCode PCSIM_GetPwmPulses(t_eFMKIO_OutPwmSig signal, t_uint16 *pulses);
+t_eReturnCode PCSIM_SetPwmPulses(t_eFMKIO_OutPwmSig signal, t_uint32 pulses);
+t_eReturnCode PCSIM_GetPwmPulses(t_eFMKIO_OutPwmSig signal, t_uint32 *pulses);
 t_eReturnCode PCSIM_InjectCanFrame(t_eFMKFDCAN_NodeList node,
                                    t_uint32 identifier,
                                    t_bool isExtended,

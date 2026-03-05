@@ -36,8 +36,11 @@ t_eCyclicModState g_pcSimSrlState_e = STATE_CYCLIC_OPE;
 t_float32 g_pcSimAnalogValues_af32[FMKIO_INPUT_SIGANA_NB];
 t_uint16 g_pcSimPwmDuty_au16[FMKIO_OUTPUT_SIGPWM_NB];
 t_float32 g_pcSimPwmFreq_af32[FMKIO_OUTPUT_SIGPWM_NB];
-t_uint16 g_pcSimPwmPulses_au16[FMKIO_OUTPUT_SIGPWM_NB];
+t_uint32 g_pcSimPwmPulses_au32[FMKIO_OUTPUT_SIGPWM_NB];
 t_cbFMKIO_PulseEvent *g_pcSimPwmPulseEndCb_apcb[FMKIO_OUTPUT_SIGPWM_NB];
+t_cbFMKIO_EventFunc *g_pcSimInEvntCb_apcb[PCSIM_DIM_OR_ONE(FMKIO_INPUT_SIGEVNT_NB)];
+t_eFMKIO_SigTrigCptr g_pcSimInEvntTrigger_ae[PCSIM_DIM_OR_ONE(FMKIO_INPUT_SIGEVNT_NB)];
+t_bool g_pcSimInEvntConfigured_ab[PCSIM_DIM_OR_ONE(FMKIO_INPUT_SIGEVNT_NB)];
 t_eFMKIO_DigValue g_pcSimOutDig_ae[FMKIO_OUTPUT_SIGDIG_NB];
 t_eFMKIO_DigValue g_pcSimInDig_ae[FMKIO_INPUT_SIGDIG_NB];
 t_float32 g_pcSimInFreq_af32[PCSIM_DIM_OR_ONE(FMKIO_INPUT_SIGFREQ_NB)];
@@ -109,10 +112,10 @@ static void s_stepPulseDrivenEncoder(t_float32 dtSec_f32)
 {
     t_uint16 pwm_u16;
     t_uint16 enc_u16;
-    t_uint16 prevPulses_u16;
+    t_uint32 prevPulses_u32;
     t_float32 absFreq_f32;
     t_float32 pulsesToEmit_f32;
-    t_uint16 emitted_u16;
+    t_uint32 emitted_u32;
     t_float32 deltaPos_mrad_f32;
     t_float32 ppr_f32;
     t_float32 mradPerPulse_f32;
@@ -131,8 +134,8 @@ static void s_stepPulseDrivenEncoder(t_float32 dtSec_f32)
 
     for (pwm_u16 = 0U; pwm_u16 < PCSIM_PWM_SLOT_NB; pwm_u16++)
     {
-        prevPulses_u16 = g_pcSimPwmPulses_au16[pwm_u16];
-        if (prevPulses_u16 == 0U)
+        prevPulses_u32 = g_pcSimPwmPulses_au32[pwm_u16];
+        if (prevPulses_u32 == 0U)
         {
             g_pcSimPwmPulseFrac_af32[pwm_u16] = 0.0f;
             continue;
@@ -145,19 +148,19 @@ static void s_stepPulseDrivenEncoder(t_float32 dtSec_f32)
         }
 
         pulsesToEmit_f32 = (absFreq_f32 * dtSec_f32) + g_pcSimPwmPulseFrac_af32[pwm_u16];
-        emitted_u16 = (t_uint16)pulsesToEmit_f32;
-        if (emitted_u16 > prevPulses_u16)
+        emitted_u32 = (t_uint32)pulsesToEmit_f32;
+        if (emitted_u32 > prevPulses_u32)
         {
-            emitted_u16 = prevPulses_u16;
+            emitted_u32 = prevPulses_u32;
         }
-        g_pcSimPwmPulseFrac_af32[pwm_u16] = pulsesToEmit_f32 - (t_float32)emitted_u16;
+        g_pcSimPwmPulseFrac_af32[pwm_u16] = pulsesToEmit_f32 - (t_float32)emitted_u32;
 
-        if (emitted_u16 == 0U)
+        if (emitted_u32 == 0U)
         {
             continue;
         }
 
-        g_pcSimPwmPulses_au16[pwm_u16] = (t_uint16)(prevPulses_u16 - emitted_u16);
+        g_pcSimPwmPulses_au32[pwm_u16] = prevPulses_u32 - emitted_u32;
         for (enc_u16 = 0U; enc_u16 < PCSIM_ENCODER_SLOT_NB; enc_u16++)
         {
             if (g_pcSimEncLinkedPwm_au16[enc_u16] != pwm_u16)
@@ -184,13 +187,13 @@ static void s_stepPulseDrivenEncoder(t_float32 dtSec_f32)
             if (sign_f32 > 0.0f)
             {
                 g_pcSimEncDir_ae[enc_u16] = FMKIO_ENCODER_DIR_FORWARD;
-                deltaPos_mrad_f32 = (t_float32)emitted_u16 * mradPerPulse_f32;
+                deltaPos_mrad_f32 = (t_float32)emitted_u32 * mradPerPulse_f32;
                 g_pcSimEncSpeed_af32[enc_u16] += absFreq_f32 * mradPerPulse_f32;
             }
             else
             {
                 g_pcSimEncDir_ae[enc_u16] = FMKIO_ENCODER_DIR_BACKWARD;
-                deltaPos_mrad_f32 = (t_float32)emitted_u16 * (-mradPerPulse_f32);
+                deltaPos_mrad_f32 = (t_float32)emitted_u32 * (-mradPerPulse_f32);
                 g_pcSimEncSpeed_af32[enc_u16] -= absFreq_f32 * mradPerPulse_f32;
             }
 
@@ -199,7 +202,7 @@ static void s_stepPulseDrivenEncoder(t_float32 dtSec_f32)
         }
 
         /* Emulate hardware pulse finished interrupt callback. */
-        if ((g_pcSimPwmPulses_au16[pwm_u16] == 0U)
+        if ((g_pcSimPwmPulses_au32[pwm_u16] == 0U)
             && (g_pcSimPwmPulseEndCb_apcb[pwm_u16] != (t_cbFMKIO_PulseEvent *)NULL_FUNCTION))
         {
             g_pcSimPwmPulseEndCb_apcb[pwm_u16]((t_eFMKIO_OutPwmSig)pwm_u16);
@@ -227,8 +230,14 @@ void PCSIM_RuntimeInit(void)
     {
         g_pcSimPwmDuty_au16[idx_u16] = 0U;
         g_pcSimPwmFreq_af32[idx_u16] = 0.0f;
-        g_pcSimPwmPulses_au16[idx_u16] = 0U;
+        g_pcSimPwmPulses_au32[idx_u16] = 0U;
         g_pcSimPwmPulseEndCb_apcb[idx_u16] = (t_cbFMKIO_PulseEvent *)NULL_FUNCTION;
+    }
+    for (idx_u16 = 0U; idx_u16 < PCSIM_DIM_OR_ONE(FMKIO_INPUT_SIGEVNT_NB); idx_u16++)
+    {
+        g_pcSimInEvntCb_apcb[idx_u16] = (t_cbFMKIO_EventFunc *)NULL_FUNCTION;
+        g_pcSimInEvntTrigger_ae[idx_u16] = FMKIO_STC_RISING_EDGE;
+        g_pcSimInEvntConfigured_ab[idx_u16] = FALSE;
     }
     for (idx_u16 = 0U; idx_u16 < FMKIO_OUTPUT_SIGDIG_NB; idx_u16++)
     {

@@ -376,6 +376,7 @@ static void s_processCommand(pcsim_socket_t sock,
     char reply_ac[PCSIM_MAX_CMD_LEN];
     char localCmd_ac[PCSIM_MAX_CMD_LEN];
     unsigned id_u32;
+    unsigned val_u32;
     int intVal_s32;
     int f2_s32;
     float floatVal_f32;
@@ -433,17 +434,17 @@ static void s_processCommand(pcsim_socket_t sock,
         snprintf(reply_ac, sizeof(reply_ac), "OK RC %d VAL %.3f\n", ret_e, value_f32);
         s_sendReply(sock, clientAddr_ps, reply_ac);
     }
-    else if (sscanf(localCmd_ac, "SET_PWM_PULSES %u %d", &id_u32, &intVal_s32) == 2)
+    else if (sscanf(localCmd_ac, "SET_PWM_PULSES %u %u", &id_u32, &val_u32) == 2)
     {
-        ret_e = PCSIM_SetPwmPulses((t_eFMKIO_OutPwmSig)id_u32, (t_uint16)intVal_s32);
+        ret_e = PCSIM_SetPwmPulses((t_eFMKIO_OutPwmSig)id_u32, (t_uint32)val_u32);
         snprintf(reply_ac, sizeof(reply_ac), "OK RC %d\n", ret_e);
         s_sendReply(sock, clientAddr_ps, reply_ac);
     }
     else if (sscanf(localCmd_ac, "GET_PWM_PULSES %u", &id_u32) == 1)
     {
-        t_uint16 value_u16 = 0U;
-        ret_e = PCSIM_GetPwmPulses((t_eFMKIO_OutPwmSig)id_u32, &value_u16);
-        snprintf(reply_ac, sizeof(reply_ac), "OK RC %d VAL %u\n", ret_e, value_u16);
+        t_uint32 value_u32 = 0U;
+        ret_e = PCSIM_GetPwmPulses((t_eFMKIO_OutPwmSig)id_u32, &value_u32);
+        snprintf(reply_ac, sizeof(reply_ac), "OK RC %d VAL %u\n", ret_e, (unsigned)value_u32);
         s_sendReply(sock, clientAddr_ps, reply_ac);
     }
     else if (sscanf(localCmd_ac, "SET_IN_DIG %u %d", &id_u32, &intVal_s32) == 2)
@@ -457,6 +458,12 @@ static void s_processCommand(pcsim_socket_t sock,
         t_eFMKIO_DigValue value_e = FMKIO_DIG_VALUE_LOW;
         ret_e = PCSIM_GetInputDigital((t_eFMKIO_InDigSig)id_u32, &value_e);
         snprintf(reply_ac, sizeof(reply_ac), "OK RC %d VAL %u\n", ret_e, (unsigned)value_e);
+        s_sendReply(sock, clientAddr_ps, reply_ac);
+    }
+    else if (sscanf(localCmd_ac, "TRIG_IN_EVNT %u", &id_u32) == 1)
+    {
+        ret_e = PCSIM_TriggerInputEvent((t_eFMKIO_InEvntSig)id_u32);
+        snprintf(reply_ac, sizeof(reply_ac), "OK RC %d\n", ret_e);
         s_sendReply(sock, clientAddr_ps, reply_ac);
     }
     else if (sscanf(localCmd_ac, "SET_OUT_DIG %u %d", &id_u32, &intVal_s32) == 2)
@@ -857,7 +864,7 @@ static void s_processCommand(pcsim_socket_t sock,
     {
         s_sendReply(sock,
                     clientAddr_ps,
-                    "OK CMDS: PING HELP GET_ALL SET_ANA/GET_ANA SET_PWM/GET_PWM SET_PWM_FREQ/GET_PWM_FREQ SET_PWM_PULSES/GET_PWM_PULSES SET_IN_DIG/GET_IN_DIG SET_OUT_DIG/GET_OUT_DIG SET_IN_FREQ/GET_IN_FREQ SET_ENC_POS/GET_ENC_POS SET_ENC_SPEED/GET_ENC_SPEED SET_ENC_MAP INJECT_CAN INJECT_CAN_EX GET_CAN_TX_COUNT GET_CAN_BROKER_TX_COUNT GET_CAN_RX_REG_COUNT DUMP_CAN_RX_REG_BURST POP_CAN_TX POP_CAN_TX_BURST POP_CAN_BROKER_TX_BURST CLEAR_CAN_TX CLEAR_CAN_BROKER_TX\n");
+                    "OK CMDS: PING HELP GET_ALL SET_ANA/GET_ANA SET_PWM/GET_PWM SET_PWM_FREQ/GET_PWM_FREQ SET_PWM_PULSES/GET_PWM_PULSES SET_IN_DIG/GET_IN_DIG TRIG_IN_EVNT SET_OUT_DIG/GET_OUT_DIG SET_IN_FREQ/GET_IN_FREQ SET_ENC_POS/GET_ENC_POS SET_ENC_SPEED/GET_ENC_SPEED SET_ENC_MAP INJECT_CAN INJECT_CAN_EX GET_CAN_TX_COUNT GET_CAN_BROKER_TX_COUNT GET_CAN_RX_REG_COUNT DUMP_CAN_RX_REG_BURST POP_CAN_TX POP_CAN_TX_BURST POP_CAN_BROKER_TX_BURST CLEAR_CAN_TX CLEAR_CAN_BROKER_TX\n");
     }
     else
     {

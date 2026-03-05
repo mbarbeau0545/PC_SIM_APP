@@ -79,6 +79,33 @@ t_eReturnCode PCSIM_GetInputDigital(t_eFMKIO_InDigSig signal, t_eFMKIO_DigValue 
     return RC_OK;
 }
 
+t_eReturnCode PCSIM_TriggerInputEvent(t_eFMKIO_InEvntSig signal)
+{
+    t_cbFMKIO_EventFunc *evntCb_pcb;
+
+    if (signal >= FMKIO_INPUT_SIGEVNT_NB)
+    {
+        return RC_ERROR_PARAM_INVALID;
+    }
+    if (g_pcSimInEvntConfigured_ab[signal] == FALSE)
+    {
+        return RC_WARNING_NO_OPERATION;
+    }
+    if (g_pcSimInEvntTrigger_ae[signal] == FMKIO_STC_FALLING_EDGE)
+    {
+        return RC_WARNING_NO_OPERATION;
+    }
+
+    evntCb_pcb = g_pcSimInEvntCb_apcb[signal];
+    if (evntCb_pcb == (t_cbFMKIO_EventFunc *)NULL_FUNCTION)
+    {
+        return RC_WARNING_NO_OPERATION;
+    }
+
+    evntCb_pcb(signal);
+    return RC_OK;
+}
+
 t_eReturnCode PCSIM_SetInputFrequency(t_eFMKIO_InFreqSig signal, t_float32 value)
 {
     if (signal >= PCSIM_IN_FREQ_SLOT_NB)
@@ -188,18 +215,18 @@ t_eReturnCode PCSIM_GetPwmFrequency(t_eFMKIO_OutPwmSig signal, t_float32 *freque
     return RC_OK;
 }
 
-t_eReturnCode PCSIM_SetPwmPulses(t_eFMKIO_OutPwmSig signal, t_uint16 pulses)
+t_eReturnCode PCSIM_SetPwmPulses(t_eFMKIO_OutPwmSig signal, t_uint32 pulses)
 {
     if (signal >= FMKIO_OUTPUT_SIGPWM_NB)
     {
         return RC_ERROR_PARAM_INVALID;
     }
-    g_pcSimPwmPulses_au16[signal] = pulses;
+    g_pcSimPwmPulses_au32[signal] = pulses;
     PCSIM_RuntimeNotifyPwmPulsesSet(signal);
     return RC_OK;
 }
 
-t_eReturnCode PCSIM_GetPwmPulses(t_eFMKIO_OutPwmSig signal, t_uint16 *pulses)
+t_eReturnCode PCSIM_GetPwmPulses(t_eFMKIO_OutPwmSig signal, t_uint32 *pulses)
 {
     if (signal >= FMKIO_OUTPUT_SIGPWM_NB)
     {
@@ -209,7 +236,7 @@ t_eReturnCode PCSIM_GetPwmPulses(t_eFMKIO_OutPwmSig signal, t_uint16 *pulses)
     {
         return RC_ERROR_PTR_NULL;
     }
-    *pulses = g_pcSimPwmPulses_au16[signal];
+    *pulses = g_pcSimPwmPulses_au32[signal];
     return RC_OK;
 }
 
@@ -286,11 +313,20 @@ t_eReturnCode FMKIO_Set_InEvntSigCfg(t_eFMKIO_InEvntSig f_signal_e,
                                      t_cbFMKIO_EventFunc *f_Evnt_cb,
                                      t_cbFMKIO_SigErrorMngmt *f_sigErr_cb)
 {
-    (void)f_signal_e;
+    if (f_signal_e >= FMKIO_INPUT_SIGEVNT_NB)
+    {
+        return RC_ERROR_PARAM_INVALID;
+    }
+    if (f_trigger_e >= FMKIO_STC_NB)
+    {
+        return RC_ERROR_PARAM_INVALID;
+    }
+    g_pcSimInEvntCb_apcb[f_signal_e] = f_Evnt_cb;
+    g_pcSimInEvntTrigger_ae[f_signal_e] = f_trigger_e;
+    g_pcSimInEvntConfigured_ab[f_signal_e] = TRUE;
+
     (void)f_pull_e;
-    (void)f_trigger_e;
     (void)f_debouncDelay_u32;
-    (void)f_Evnt_cb;
     (void)f_sigErr_cb;
     return RC_OK;
 }
@@ -480,23 +516,6 @@ t_eReturnCode FMKIO_Set_OutPwmSigPulses(t_eFMKIO_OutPwmSig f_signal_e,
                                         t_uint16 f_pulses_u16)
 {
     t_eReturnCode ret_e;
-    t_sint16 signedPulses_s16;
-    t_uint16 pulsesAbs_u16;
-
-    /* Compatibility path: if caller passed signed pulses through uint16 cast,
-     * recover sign from int16 representation and mirror it on frequency sign.
-     */
-    signedPulses_s16 = (t_sint16)f_pulses_u16;
-    if (signedPulses_s16 < (t_sint16)0)
-    {
-        pulsesAbs_u16 = (t_uint16)(-signedPulses_s16);
-        f_frequency_f32 = -(t_float32)fabs((double)f_frequency_f32);
-    }
-    else
-    {
-        pulsesAbs_u16 = (t_uint16)signedPulses_s16;
-        f_frequency_f32 = (t_float32)fabs((double)f_frequency_f32);
-    }
 
     ret_e = PCSIM_SetPwmFrequency(f_signal_e, f_frequency_f32);
     if (ret_e == RC_OK)
@@ -505,7 +524,7 @@ t_eReturnCode FMKIO_Set_OutPwmSigPulses(t_eFMKIO_OutPwmSig f_signal_e,
     }
     if (ret_e == RC_OK)
     {
-        ret_e = PCSIM_SetPwmPulses(f_signal_e, pulsesAbs_u16);
+        ret_e = PCSIM_SetPwmPulses(f_signal_e, (t_uint32)f_pulses_u16);
     }
     return ret_e;
 }
