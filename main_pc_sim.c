@@ -53,7 +53,7 @@ t_eReturnCode CL42T_Cyclic(void);
 #define PCSIM_MAX_CMD_LEN 8192
 #define PCSIM_MAX_UDP_CMDS_PER_STEP 32
 #define PCSIM_CAN_BURST_MAX 64
-#define PCSIM_CAN_RX_BURST_MAX 64
+#define PCSIM_CAN_RX_BURST_MAX 255
 
 typedef struct
 {
