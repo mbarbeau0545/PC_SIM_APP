@@ -1,5 +1,9 @@
 #include "pc_sim_runtime.h"
 
+static t_bool g_pcSimCanNodeConfigured_ab[FMKFDCAN_NODE_NB];
+static t_sFMKFDCAN_DrvNodeCfg
+    g_pcSimCanNodeConfiguration_as[FMKFDCAN_NODE_NB];
+
 static t_uint16 s_getLogCount(const t_sPCSIM_CanTxLog *log_ps)
 {
     return log_ps->count_u16;
@@ -133,6 +137,60 @@ t_eReturnCode FMKFDCAN_SetState(t_eCyclicModState f_State_e)
 {
     g_pcSimCanState_e = f_State_e;
     return RC_OK;
+}
+
+/*********************************
+ * FMKFDCAN_InitDriver
+ *********************************/
+t_eReturnCode FMKFDCAN_InitDriver(t_eFMKFDCAN_NodeList f_Node_e,
+                                  t_sFMKFDCAN_DrvNodeCfg f_NodeCfg_s)
+{
+    t_eReturnCode Ret_e = RC_OK;
+
+    //---- Check the simulated FDCAN node ----//
+    if(f_Node_e >= FMKFDCAN_NODE_NB)
+    {
+        Ret_e = RC_ERROR_PARAM_INVALID;
+    }
+    else if(g_pcSimCanNodeConfigured_ab[f_Node_e] == TRUE)
+    {
+        Ret_e = RC_ERROR_ALREADY_CONFIGURED;
+    }
+    else if((f_NodeCfg_s.clockDivider_e == 0U)
+    || (f_NodeCfg_s.clockDivider_e >= FMKFDCAN_CLOCK_KERNEL_DIV_NB)
+    || ((f_NodeCfg_s.clockDivider_e > FMKFDCAN_CLOCK_KERNEL_DIV1)
+    && (((t_uint8)f_NodeCfg_s.clockDivider_e % 2U) != 0U)))
+    {
+        Ret_e = RC_ERROR_PARAM_INVALID;
+    }
+    else if(f_NodeCfg_s.ProtocolUse_e >= FMKFDCAN_PROTOCOL_FDCAN_NB)
+    {
+        Ret_e = RC_ERROR_PARAM_INVALID;
+    }
+    else if(f_NodeCfg_s.FrameBaudrate_e >= FMKFDCAN_FRAME_BAUDRATE_NB)
+    {
+        Ret_e = RC_ERROR_PARAM_INVALID;
+    }
+    else if(f_NodeCfg_s.DataBaudrate_e >= FMKFDCAN_FRAME_BAUDRATE_NB)
+    {
+        Ret_e = RC_ERROR_PARAM_INVALID;
+    }
+    else if(f_NodeCfg_s.QueueType_e >= FMKFDCAN_HWQUEUE_TYPE_NB)
+    {
+        Ret_e = RC_ERROR_PARAM_INVALID;
+    }
+    else if(f_NodeCfg_s.FifoMode_e >= FMKFDCAN_FIFO_OPEMODE_NB)
+    {
+        Ret_e = RC_ERROR_PARAM_INVALID;
+    }
+    else
+    {
+        //---- Save the configuration used by the simulated node ----//
+        g_pcSimCanNodeConfiguration_as[f_Node_e] = f_NodeCfg_s;
+        g_pcSimCanNodeConfigured_ab[f_Node_e] = TRUE;
+    }
+
+    return Ret_e;
 }
 
 t_eReturnCode FMKFDCAN_ConfigureRxItemEvent(t_eFMKFDCAN_NodeList f_Node_e,

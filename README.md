@@ -8,6 +8,38 @@ PC_SIM execute l'application STM32 sur PC avec stubs FMK et un serveur UDP local
 pio run -e pc_sim_debug
 ```
 
+`pc_sim_debug` sélectionne son profil NVM exclusivement à partir de
+`FMKNVM_EEPROM_TYPE` dans `FMKNVM_ConfigPrivate.h`. Pour changer la mémoire
+simulée, modifier ce define avant de reconstruire `pc_sim_debug` :
+
+```c
+#define FMKNVM_EEPROM_TYPE FMKNVM_EEPROM_TYPE_FLASH_H753
+```
+
+Les valeurs disponibles sont `FMKNVM_EEPROM_TYPE_FLASH_H753`,
+`FMKNVM_EEPROM_TYPE_FLASH_G4`, `FMKNVM_EEPROM_TYPE_I2C` et
+`FMKNVM_EEPROM_TYPE_SPI`.
+
+Le cœur `FMK_NVM.c` est identique au firmware. Seules les fonctions
+ConfigSpecific sont remplacées au lien par `pc_sim_fmknvm_backend.c`.
+
+Chaque profil possède une image persistante par défaut :
+
+- `pcsim_fmknvm_h753.bin` ;
+- `pcsim_fmknvm_g4.bin` ;
+- `pcsim_fmknvm_i2c.bin` ;
+- `pcsim_fmknvm_spi.bin`.
+
+La variable d’environnement `PCSIM_NVM_FILE` permet de choisir un autre
+fichier, notamment un fichier distinct pour chaque ECU simulé.
+
+Les profils Flash imposent l’effacement et les transitions de bits `1 → 0`.
+Les profils EEPROM autorisent la réécriture et découpent chaque programmation
+aux frontières de pages : 64 octets en I²C et 128 octets en SPI. Cette
+simulation se situe au niveau du contrat backend ; un simulateur de bus SPI
+complet ne sera nécessaire que lorsqu’un backend EEPROM SPI concret utilisera
+un module `FMK_SPI`.
+
 Binaire:
 
 - `.pio/build/pc_sim_debug/program.exe`

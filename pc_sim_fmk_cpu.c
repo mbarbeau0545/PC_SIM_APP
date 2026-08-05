@@ -1,6 +1,8 @@
 #include "pc_sim_runtime.h"
 #include "FMK_HAL/FMK_CPU/Src/FMK_CPU.h"
 
+static t_sFMKCPU_CoreFaultInfo g_pcSimCoreFaultInfo_s;
+
 t_eReturnCode FMKCPU_Init(void) { return RC_OK; }
 t_eReturnCode FMKCPU_Cyclic(void) { return RC_OK; }
 
@@ -12,6 +14,27 @@ t_eReturnCode FMKCPU_GetState(t_eCyclicModState *f_State_pe)
     }
     *f_State_pe = g_pcSimCpuState_e;
     return RC_OK;
+}
+
+/*********************************
+ * FMKCPU_GetLastCoreFaultInfo
+ *********************************/
+t_eReturnCode FMKCPU_GetLastCoreFaultInfo(t_sFMKCPU_CoreFaultInfo * f_faultInfo_ps)
+{
+    t_eReturnCode Ret_e = RC_OK;
+
+    //---- Check the destination used for the simulated fault snapshot ----//
+    if(f_faultInfo_ps == (t_sFMKCPU_CoreFaultInfo *)NULL)
+    {
+        Ret_e = RC_ERROR_PTR_NULL;
+    }
+    else
+    {
+        //---- Return the latest simulated core fault snapshot ----//
+        *f_faultInfo_ps = g_pcSimCoreFaultInfo_s;
+    }
+
+    return Ret_e;
 }
 
 t_eReturnCode FMKCPU_SetState(t_eCyclicModState f_State_e)
@@ -83,6 +106,41 @@ t_eReturnCode FMKCPU_GetOscRccSrc(t_eFMKCPU_ClockPort f_clockPort_e,
     }
     *f_ClkOsc_pe = (t_eFMKCPU_SysClkOsc)0;
     return RC_OK;
+}
+
+/*********************************
+ * FMKCPU_GetRccClockValue
+ *********************************/
+t_eReturnCode FMKCPU_GetRccClockValue(t_eFMKCPU_ClockPort f_clockPort_e,
+                                      t_uint16 * f_OscValueMHz_pu16)
+{
+    t_eReturnCode Ret_e = RC_OK;
+
+    //---- Check the requested RCC clock port ----//
+    if(f_clockPort_e >= FMKCPU_RCC_CLK_NB)
+    {
+        Ret_e = RC_ERROR_PARAM_INVALID;
+    }
+    else if(f_OscValueMHz_pu16 == (t_uint16 *)NULL)
+    {
+        Ret_e = RC_ERROR_PTR_NULL;
+    }
+    else
+    {
+        //---- Resolve the simulated oscillator connected to the port ----//
+        t_eFMKCPU_SysClkOsc clkOsc_e = FMKCPU_SYS_CLOCK_NB;
+
+        Ret_e = FMKCPU_GetOscRccSrc(f_clockPort_e, &clkOsc_e);
+
+        if(Ret_e == RC_OK)
+        {
+            //---- Read the simulated oscillator frequency ----//
+            Ret_e = FMKCPU_GetSysClkValue(clkOsc_e,
+                                          f_OscValueMHz_pu16);
+        }
+    }
+
+    return Ret_e;
 }
 
 t_eReturnCode FMKCPU_GetSysClkValue(t_eFMKCPU_SysClkOsc f_ClkOsc_e,

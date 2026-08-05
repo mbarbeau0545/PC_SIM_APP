@@ -45,8 +45,15 @@
 #endif
 
 #if !defined(PCSIM_CL42T_HEADER_FOUND)
-t_eReturnCode CL42T_Init(void);
-t_eReturnCode CL42T_Cyclic(void);
+t_eReturnCode CL42T_Init(void)
+{
+    return RC_OK;
+}
+
+t_eReturnCode CL42T_Cyclic(void)
+{
+    return RC_OK;
+}
 #endif
 
 #define PCSIM_DEFAULT_UDP_PORT 19090

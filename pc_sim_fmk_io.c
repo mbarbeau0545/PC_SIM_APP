@@ -294,13 +294,11 @@ t_eReturnCode FMKIO_Set_InAnaSigCfg(t_eFMKIO_InAnaSig f_signal_e,
 
 t_eReturnCode FMKIO_Set_InFreqSigCfg(t_eFMKIO_InFreqSig f_signal_e,
                                      t_eFMKIO_SigTrigCptr f_trigger_e,
-                                     t_eFMKIO_FreqMeas f_freqMeas_e,
                                      t_float32 f_samplingHz_f32,
                                      t_cbFMKIO_SigErrorMngmt *f_sigErr_cb)
 {
     (void)f_signal_e;
     (void)f_trigger_e;
-    (void)f_freqMeas_e;
     (void)f_samplingHz_f32;
     (void)f_sigErr_cb;
     return RC_OK;
@@ -486,9 +484,15 @@ t_eReturnCode FMKIO_Get_InAnaSigValue(t_eFMKIO_InAnaSig f_signal_e, t_float32 *f
     return RC_OK;
 }
 
-t_eReturnCode FMKIO_Get_InFreqSigValue(t_eFMKIO_InFreqSig f_signal_e, t_float32 *f_value_pf32)
+t_eReturnCode FMKIO_Get_InFreqSigValue(t_eFMKIO_InFreqSig f_signal_e,
+                                       t_eFMKIO_FreqMeas f_measType_e,
+                                       t_float32 *f_value_pf32)
 {
     if (f_signal_e >= PCSIM_IN_FREQ_SLOT_NB)
+    {
+        return RC_ERROR_PARAM_INVALID;
+    }
+    if (f_measType_e >= FMKIO_FREQ_MEAS_NB)
     {
         return RC_ERROR_PARAM_INVALID;
     }
