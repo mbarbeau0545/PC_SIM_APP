@@ -39,8 +39,7 @@ typedef struct __t_sPCSIM_FMKNVM_Context
 } t_sPCSIM_FMKNVM_Context;
 
 /// @brief File-backed simulated NVM bytes.
-static t_uint8 g_PCSIM_FMKNVM_Storage_au8[
-    PCSIM_FMKNVM_STORAGE_MAX_SIZE];
+static t_uint8 g_PCSIM_FMKNVM_Storage_au8[PCSIM_FMKNVM_STORAGE_MAX_SIZE];
 
 /// @brief Runtime context of the selected simulated memory profile.
 static t_sPCSIM_FMKNVM_Context g_PCSIM_FMKNVM_Context_s;
@@ -61,8 +60,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_Init(void * f_Context_pv);
  * @retval RC_ERROR_PTR_NULL A supplied pointer is null.
  * @retval RC_ERROR_INSTANCE_NOT_INITIALIZED The backend is not initialized.
  */
-static t_eReturnCode s_PCSIM_FMKNVM_GetGeometry(   void * f_Context_pv,
-                                                   t_sFMKNVM_BackendGeometry * f_Geometry_ps);
+static t_eReturnCode s_PCSIM_FMKNVM_GetGeometry(void * f_Context_pv, t_sFMKNVM_BackendGeometry * f_Geometry_ps);
 /**
  * @brief Return capabilities matching the selected simulated technology.
  * @param[in] f_Context_pv : Initialized simulator backend context.
@@ -89,7 +87,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_Read(   void * f_Context_pv,
                                             t_uint32 f_Size_u32);
 /**
  * @brief Program bytes using the selected simulated technology semantics.
- * @note Flash profiles only permit one-to-zero transitions. I2C and SPI
+ * @note Flash profiles only permit one-to-zero transitions.I2C and SPI
  *       profiles split writes at their respective page boundaries and permit
  *       byte rewriting, matching EEPROM behavior without exposing a bus to
  *       FMK_NVM.
@@ -116,9 +114,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_Program(   void * f_Context_pv,
  * @retval RC_ERROR_PARAM_INVALID Range or alignment is invalid.
  * @retval RC_NVM_BACKEND_ERASE_ERROR Persistence failed.
  */
-static t_eReturnCode s_PCSIM_FMKNVM_Erase(   void * f_Context_pv,
-                                             t_uint32 f_Address_u32,
-                                             t_uint32 f_Size_u32);
+static t_eReturnCode s_PCSIM_FMKNVM_Erase(void * f_Context_pv, t_uint32 f_Address_u32, t_uint32 f_Size_u32);
 /**
  * @brief Report the synchronous simulator busy state.
  * @param[in] f_Context_pv : Simulator backend context.
@@ -132,8 +128,7 @@ static t_bool s_PCSIM_FMKNVM_IsBusy(void * f_Context_pv);
  * @retval RC_OK The result was returned.
  * @retval RC_ERROR_PTR_NULL A supplied pointer is null.
  */
-static t_eReturnCode s_PCSIM_FMKNVM_GetOperationResult(   void * f_Context_pv,
-                                                          t_eReturnCode * f_OperationResult_pe);
+static t_eReturnCode s_PCSIM_FMKNVM_GetOperationResult(void * f_Context_pv, t_eReturnCode * f_OperationResult_pe);
 /**
  * @brief Service the synchronous simulated backend.
  * @param[in] f_Context_pv : Simulator backend context.
@@ -192,8 +187,7 @@ static const t_sFMKNVM_BackendApi c_PCSIM_FMKNVM_BackendApi_s =
 };
 
 /// @brief H753 simulation mapping with two 128-KiB slots per partition.
-static const t_sFMKNVM_PartitionStorageCfg
-    c_PCSIM_FMKNVM_H753Storage_as[FMKNVM_PARTITION_NB] =
+static const t_sFMKNVM_PartitionStorageCfg c_PCSIM_FMKNVM_H753Storage_as[FMKNVM_PARTITION_NB] =
 {
     {0U, 262144U, 2U},
     {262144U, 262144U, 2U},
@@ -201,8 +195,7 @@ static const t_sFMKNVM_PartitionStorageCfg
 };
 
 /// @brief G4 simulation mapping with two 4-KiB slots per partition.
-static const t_sFMKNVM_PartitionStorageCfg
-    c_PCSIM_FMKNVM_G4Storage_as[FMKNVM_PARTITION_NB] =
+static const t_sFMKNVM_PartitionStorageCfg c_PCSIM_FMKNVM_G4Storage_as[FMKNVM_PARTITION_NB] =
 {
     {0U, 8192U, 2U},
     {8192U, 8192U, 2U},
@@ -210,8 +203,7 @@ static const t_sFMKNVM_PartitionStorageCfg
 };
 
 /// @brief I2C EEPROM mapping with two 4-KiB slots per partition.
-static const t_sFMKNVM_PartitionStorageCfg
-    c_PCSIM_FMKNVM_I2cStorage_as[FMKNVM_PARTITION_NB] =
+static const t_sFMKNVM_PartitionStorageCfg c_PCSIM_FMKNVM_I2cStorage_as[FMKNVM_PARTITION_NB] =
 {
     {0U, 8192U, 2U},
     {8192U, 8192U, 2U},
@@ -219,8 +211,7 @@ static const t_sFMKNVM_PartitionStorageCfg
 };
 
 /// @brief SPI EEPROM mapping with two 8-KiB slots per partition.
-static const t_sFMKNVM_PartitionStorageCfg
-    c_PCSIM_FMKNVM_SpiStorage_as[FMKNVM_PARTITION_NB] =
+static const t_sFMKNVM_PartitionStorageCfg c_PCSIM_FMKNVM_SpiStorage_as[FMKNVM_PARTITION_NB] =
 {
     {0U, 16384U, 2U},
     {16384U, 16384U, 2U},
@@ -232,8 +223,7 @@ static const t_sFMKNVM_PartitionStorageCfg
  *********************************/
 const t_sFMKNVM_BackendApi * FMKNVM_Specific_GetBackendApi(void)
 {
-    const t_sFMKNVM_BackendApi * BackendApi_ps =
-        &c_PCSIM_FMKNVM_BackendApi_s;
+    const t_sFMKNVM_BackendApi * BackendApi_ps = &c_PCSIM_FMKNVM_BackendApi_s;
 
     //---- 1- Inject the PC simulator backend for every supported profile ----//
 
@@ -315,8 +305,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_Init(void * f_Context_pv)
     }
     else
     {
-        t_sPCSIM_FMKNVM_Context * Context_ps =
-            (t_sPCSIM_FMKNVM_Context *)f_Context_pv;
+        t_sPCSIM_FMKNVM_Context * Context_ps = (t_sPCSIM_FMKNVM_Context *)f_Context_pv;
 
         Context_ps->isInitialized_b = FALSE;
         Ret_e = s_PCSIM_FMKNVM_ConfigureProfile(Context_ps);
@@ -341,8 +330,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_Init(void * f_Context_pv)
 /*********************************
  * s_PCSIM_FMKNVM_GetGeometry
  *********************************/
-static t_eReturnCode s_PCSIM_FMKNVM_GetGeometry(   void * f_Context_pv,
-                                                   t_sFMKNVM_BackendGeometry * f_Geometry_ps)
+static t_eReturnCode s_PCSIM_FMKNVM_GetGeometry(void * f_Context_pv, t_sFMKNVM_BackendGeometry * f_Geometry_ps)
 {
     t_eReturnCode Ret_e = RC_OK;
 
@@ -353,8 +341,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_GetGeometry(   void * f_Context_pv,
     }
     else
     {
-        t_sPCSIM_FMKNVM_Context * Context_ps =
-            (t_sPCSIM_FMKNVM_Context *)f_Context_pv;
+        t_sPCSIM_FMKNVM_Context * Context_ps = (t_sPCSIM_FMKNVM_Context *)f_Context_pv;
 
         if(Context_ps->isInitialized_b == FALSE)
         {
@@ -364,12 +351,9 @@ static t_eReturnCode s_PCSIM_FMKNVM_GetGeometry(   void * f_Context_pv,
         {
             //---- 2- Export the selected generic geometry ----//
             f_Geometry_ps->storageSize_u32 = Context_ps->storageSize_u32;
-            f_Geometry_ps->eraseUnitSize_u32 =
-                Context_ps->eraseUnitSize_u32;
-            f_Geometry_ps->programUnitSize_u32 =
-                Context_ps->programUnitSize_u32;
-            f_Geometry_ps->commitUnitSize_u32 =
-                Context_ps->commitUnitSize_u32;
+            f_Geometry_ps->eraseUnitSize_u32 = Context_ps->eraseUnitSize_u32;
+            f_Geometry_ps->programUnitSize_u32 = Context_ps->programUnitSize_u32;
+            f_Geometry_ps->commitUnitSize_u32 = Context_ps->commitUnitSize_u32;
         }
     }
 
@@ -391,8 +375,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_GetCapabilities(   void * f_Context_pv,
     }
     else
     {
-        t_sPCSIM_FMKNVM_Context * Context_ps =
-            (t_sPCSIM_FMKNVM_Context *)f_Context_pv;
+        t_sPCSIM_FMKNVM_Context * Context_ps = (t_sPCSIM_FMKNVM_Context *)f_Context_pv;
 
         if(Context_ps->isInitialized_b == FALSE)
         {
@@ -401,11 +384,9 @@ static t_eReturnCode s_PCSIM_FMKNVM_GetCapabilities(   void * f_Context_pv,
         else
         {
             //---- 2- Export behavior used by the generic transaction core ----//
-            f_Capabilities_ps->eraseRequired_b =
-                Context_ps->eraseRequired_b;
+            f_Capabilities_ps->eraseRequired_b = Context_ps->eraseRequired_b;
             f_Capabilities_ps->readWhileWriteSupported_b = TRUE;
-            f_Capabilities_ps->maxTransferSize_u32 =
-                Context_ps->pageSize_u32;
+            f_Capabilities_ps->maxTransferSize_u32 = Context_ps->pageSize_u32;
         }
     }
 
@@ -429,29 +410,21 @@ static t_eReturnCode s_PCSIM_FMKNVM_Read(   void * f_Context_pv,
     }
     else
     {
-        t_sPCSIM_FMKNVM_Context * Context_ps =
-            (t_sPCSIM_FMKNVM_Context *)f_Context_pv;
-        t_bool isRangeValid_b =
-            s_PCSIM_FMKNVM_IsRangeValid( Context_ps,
-                                         f_Address_u32,
-                                         f_Size_u32);
+        t_sPCSIM_FMKNVM_Context * Context_ps = (t_sPCSIM_FMKNVM_Context *)f_Context_pv;
+        t_bool isRangeValid_b = s_PCSIM_FMKNVM_IsRangeValid(Context_ps, f_Address_u32, f_Size_u32);
 
         if(Context_ps->isInitialized_b == FALSE)
         {
             Ret_e = RC_ERROR_INSTANCE_NOT_INITIALIZED;
         }
-        else if((isRangeValid_b == FALSE) ||
-                (f_Size_u32 > 0xFFFFU))
+        else if((isRangeValid_b == FALSE) || (f_Size_u32 > 0xFFFFU))
         {
             Ret_e = RC_ERROR_PARAM_INVALID;
         }
         else
         {
             //---- 2- Copy bytes from the persistent RAM mirror ----//
-            Ret_e = SafeMem_memcpy( f_Data_pu8,
-                                    &g_PCSIM_FMKNVM_Storage_au8[
-                                        f_Address_u32],
-                                    (t_uint16)f_Size_u32);
+            Ret_e = SafeMem_memcpy(f_Data_pu8, &g_PCSIM_FMKNVM_Storage_au8[f_Address_u32], (t_uint16)f_Size_u32);
         }
 
         Context_ps->lastResult_e = Ret_e;
@@ -477,20 +450,14 @@ static t_eReturnCode s_PCSIM_FMKNVM_Program(   void * f_Context_pv,
     }
     else
     {
-        t_sPCSIM_FMKNVM_Context * Context_ps =
-            (t_sPCSIM_FMKNVM_Context *)f_Context_pv;
-        t_bool isRangeValid_b =
-            s_PCSIM_FMKNVM_IsRangeValid( Context_ps,
-                                         f_Address_u32,
-                                         f_Size_u32);
+        t_sPCSIM_FMKNVM_Context * Context_ps = (t_sPCSIM_FMKNVM_Context *)f_Context_pv;
+        t_bool isRangeValid_b = s_PCSIM_FMKNVM_IsRangeValid(Context_ps, f_Address_u32, f_Size_u32);
 
         if(Context_ps->isInitialized_b == FALSE)
         {
             Ret_e = RC_ERROR_INSTANCE_NOT_INITIALIZED;
         }
-        else if((isRangeValid_b == FALSE) ||
-                ((Context_ps->eraseRequired_b == TRUE) &&
-                 ((f_Address_u32 %
+        else if((isRangeValid_b == FALSE) || ((Context_ps->eraseRequired_b == TRUE) && ((f_Address_u32 %
                    Context_ps->programUnitSize_u32) != 0U)))
         {
             Ret_e = RC_ERROR_PARAM_INVALID;
@@ -500,16 +467,12 @@ static t_eReturnCode s_PCSIM_FMKNVM_Program(   void * f_Context_pv,
             t_uint32 processedSize_u32 = 0U;
 
             //---- 2- Split EEPROM writes at page boundaries ----//
-            while((processedSize_u32 < f_Size_u32) &&
-                  (Ret_e == RC_OK))
+            while((processedSize_u32 < f_Size_u32) && (Ret_e == RC_OK))
             {
-                t_uint32 currentAddress_u32 =
-                    f_Address_u32 + processedSize_u32;
-                t_uint32 pageRemaining_u32 =
-                    Context_ps->pageSize_u32 -
+                t_uint32 currentAddress_u32 = f_Address_u32 + processedSize_u32;
+                t_uint32 pageRemaining_u32 = Context_ps->pageSize_u32 -
                     (currentAddress_u32 % Context_ps->pageSize_u32);
-                t_uint32 chunkSize_u32 =
-                    f_Size_u32 - processedSize_u32;
+                t_uint32 chunkSize_u32 = f_Size_u32 - processedSize_u32;
 
                 if(chunkSize_u32 > pageRemaining_u32)
                 {
@@ -518,21 +481,16 @@ static t_eReturnCode s_PCSIM_FMKNVM_Program(   void * f_Context_pv,
 
                 //---- 3- Apply Flash or EEPROM byte programming rules ----//
                 for(t_uint32 idx_u32 = 0U ;
-                    (idx_u32 < chunkSize_u32) &&
-                    (Ret_e == RC_OK) ;
+                    (idx_u32 < chunkSize_u32) && (Ret_e == RC_OK) ;
                     idx_u32++)
                 {
-                    t_uint32 storageIdx_u32 =
-                        currentAddress_u32 + idx_u32;
-                    t_uint8 source_u8 =
-                        f_Data_pcu8[processedSize_u32 + idx_u32];
+                    t_uint32 storageIdx_u32 = currentAddress_u32 + idx_u32;
+                    t_uint8 source_u8 = f_Data_pcu8[processedSize_u32 + idx_u32];
 
                     if(Context_ps->eraseRequired_b == TRUE)
                     {
-                        t_uint8 current_u8 =
-                            g_PCSIM_FMKNVM_Storage_au8[storageIdx_u32];
-                        t_bool isTransitionValid_b =
-                            ((current_u8 & source_u8) == source_u8);
+                        t_uint8 current_u8 = g_PCSIM_FMKNVM_Storage_au8[storageIdx_u32];
+                        t_bool isTransitionValid_b = ((current_u8 & source_u8) == source_u8);
 
                         if(isTransitionValid_b == FALSE)
                         {
@@ -540,14 +498,12 @@ static t_eReturnCode s_PCSIM_FMKNVM_Program(   void * f_Context_pv,
                         }
                         else
                         {
-                            g_PCSIM_FMKNVM_Storage_au8[storageIdx_u32] =
-                                current_u8 & source_u8;
+                            g_PCSIM_FMKNVM_Storage_au8[storageIdx_u32] = current_u8 & source_u8;
                         }
                     }
                     else
                     {
-                        g_PCSIM_FMKNVM_Storage_au8[storageIdx_u32] =
-                            source_u8;
+                        g_PCSIM_FMKNVM_Storage_au8[storageIdx_u32] = source_u8;
                     }
                 }
 
@@ -560,9 +516,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_Program(   void * f_Context_pv,
             if(Ret_e == RC_OK)
             {
                 //---- 4- Flush the programmed range for restart persistence ----//
-                Ret_e = s_PCSIM_FMKNVM_PersistRange( Context_ps,
-                                                     f_Address_u32,
-                                                     f_Size_u32);
+                Ret_e = s_PCSIM_FMKNVM_PersistRange(Context_ps, f_Address_u32, f_Size_u32);
             }
         }
 
@@ -575,9 +529,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_Program(   void * f_Context_pv,
 /*********************************
  * s_PCSIM_FMKNVM_Erase
  *********************************/
-static t_eReturnCode s_PCSIM_FMKNVM_Erase(   void * f_Context_pv,
-                                             t_uint32 f_Address_u32,
-                                             t_uint32 f_Size_u32)
+static t_eReturnCode s_PCSIM_FMKNVM_Erase(void * f_Context_pv, t_uint32 f_Address_u32, t_uint32 f_Size_u32)
 {
     t_eReturnCode Ret_e = RC_OK;
 
@@ -588,19 +540,14 @@ static t_eReturnCode s_PCSIM_FMKNVM_Erase(   void * f_Context_pv,
     }
     else
     {
-        t_sPCSIM_FMKNVM_Context * Context_ps =
-            (t_sPCSIM_FMKNVM_Context *)f_Context_pv;
-        t_bool isRangeValid_b =
-            s_PCSIM_FMKNVM_IsRangeValid( Context_ps,
-                                         f_Address_u32,
-                                         f_Size_u32);
+        t_sPCSIM_FMKNVM_Context * Context_ps = (t_sPCSIM_FMKNVM_Context *)f_Context_pv;
+        t_bool isRangeValid_b = s_PCSIM_FMKNVM_IsRangeValid(Context_ps, f_Address_u32, f_Size_u32);
 
         if(Context_ps->isInitialized_b == FALSE)
         {
             Ret_e = RC_ERROR_INSTANCE_NOT_INITIALIZED;
         }
-        else if((isRangeValid_b == FALSE) ||
-                (Context_ps->eraseRequired_b == FALSE) ||
+        else if((isRangeValid_b == FALSE) || (Context_ps->eraseRequired_b == FALSE) ||
                 ((f_Address_u32 % Context_ps->eraseUnitSize_u32) != 0U) ||
                 ((f_Size_u32 % Context_ps->eraseUnitSize_u32) != 0U))
         {
@@ -613,14 +560,11 @@ static t_eReturnCode s_PCSIM_FMKNVM_Erase(   void * f_Context_pv,
                 idx_u32 < f_Size_u32 ;
                 idx_u32++)
             {
-                g_PCSIM_FMKNVM_Storage_au8[f_Address_u32 + idx_u32] =
-                    0xFFU;
+                g_PCSIM_FMKNVM_Storage_au8[f_Address_u32 + idx_u32] = 0xFFU;
             }
 
             //---- 3- Persist the erased physical range ----//
-            Ret_e = s_PCSIM_FMKNVM_PersistRange( Context_ps,
-                                                 f_Address_u32,
-                                                 f_Size_u32);
+            Ret_e = s_PCSIM_FMKNVM_PersistRange(Context_ps, f_Address_u32, f_Size_u32);
 
             if(Ret_e < RC_OK)
             {
@@ -650,8 +594,7 @@ static t_bool s_PCSIM_FMKNVM_IsBusy(void * f_Context_pv)
 /*********************************
  * s_PCSIM_FMKNVM_GetOperationResult
  *********************************/
-static t_eReturnCode s_PCSIM_FMKNVM_GetOperationResult(   void * f_Context_pv,
-                                                          t_eReturnCode * f_OperationResult_pe)
+static t_eReturnCode s_PCSIM_FMKNVM_GetOperationResult(void * f_Context_pv, t_eReturnCode * f_OperationResult_pe)
 {
     t_eReturnCode Ret_e = RC_OK;
 
@@ -662,8 +605,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_GetOperationResult(   void * f_Context_pv,
     }
     else
     {
-        const t_sPCSIM_FMKNVM_Context * Context_ps =
-            (const t_sPCSIM_FMKNVM_Context *)f_Context_pv;
+        const t_sPCSIM_FMKNVM_Context * Context_ps = (const t_sPCSIM_FMKNVM_Context *)f_Context_pv;
 
         *f_OperationResult_pe = Context_ps->lastResult_e;
     }
@@ -695,14 +637,10 @@ static t_eReturnCode s_PCSIM_FMKNVM_ConfigureProfile(   t_sPCSIM_FMKNVM_Context 
         {
             f_Context_ps->filePath_pc = "pcsim_fmknvm_h753.bin";
             f_Context_ps->storageSize_u32 = 1048576U;
-            f_Context_ps->eraseUnitSize_u32 =
-                PCSIM_FMKNVM_H753_ERASE_SIZE;
-            f_Context_ps->programUnitSize_u32 =
-                PCSIM_FMKNVM_H753_PROGRAM_SIZE;
-            f_Context_ps->commitUnitSize_u32 =
-                PCSIM_FMKNVM_H753_PROGRAM_SIZE;
-            f_Context_ps->pageSize_u32 =
-                PCSIM_FMKNVM_H753_PROGRAM_SIZE;
+            f_Context_ps->eraseUnitSize_u32 = PCSIM_FMKNVM_H753_ERASE_SIZE;
+            f_Context_ps->programUnitSize_u32 = PCSIM_FMKNVM_H753_PROGRAM_SIZE;
+            f_Context_ps->commitUnitSize_u32 = PCSIM_FMKNVM_H753_PROGRAM_SIZE;
+            f_Context_ps->pageSize_u32 = PCSIM_FMKNVM_H753_PROGRAM_SIZE;
             f_Context_ps->eraseRequired_b = TRUE;
         }
         break;
@@ -710,14 +648,10 @@ static t_eReturnCode s_PCSIM_FMKNVM_ConfigureProfile(   t_sPCSIM_FMKNVM_Context 
         {
             f_Context_ps->filePath_pc = "pcsim_fmknvm_g4.bin";
             f_Context_ps->storageSize_u32 = 24576U;
-            f_Context_ps->eraseUnitSize_u32 =
-                PCSIM_FMKNVM_G4_ERASE_SIZE;
-            f_Context_ps->programUnitSize_u32 =
-                PCSIM_FMKNVM_G4_PROGRAM_SIZE;
-            f_Context_ps->commitUnitSize_u32 =
-                PCSIM_FMKNVM_G4_PROGRAM_SIZE;
-            f_Context_ps->pageSize_u32 =
-                PCSIM_FMKNVM_G4_PROGRAM_SIZE;
+            f_Context_ps->eraseUnitSize_u32 = PCSIM_FMKNVM_G4_ERASE_SIZE;
+            f_Context_ps->programUnitSize_u32 = PCSIM_FMKNVM_G4_PROGRAM_SIZE;
+            f_Context_ps->commitUnitSize_u32 = PCSIM_FMKNVM_G4_PROGRAM_SIZE;
+            f_Context_ps->pageSize_u32 = PCSIM_FMKNVM_G4_PROGRAM_SIZE;
             f_Context_ps->eraseRequired_b = TRUE;
         }
         break;
@@ -751,9 +685,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_ConfigureProfile(   t_sPCSIM_FMKNVM_Context 
         break;
     }
 
-    if((Ret_e == RC_OK) &&
-       (EnvironmentPath_pc != NULL) &&
-       (EnvironmentPath_pc[0U] != '\0'))
+    if((Ret_e == RC_OK) && (EnvironmentPath_pc != NULL) && (EnvironmentPath_pc[0U] != '\0'))
     {
         //---- 2- Allow one persistent image path per simulated ECU ----//
         f_Context_ps->filePath_pc = EnvironmentPath_pc;
@@ -784,10 +716,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_LoadImage(   t_sPCSIM_FMKNVM_Context * f_Con
 
     if(ImageFile_ps != NULL)
     {
-        readSize_sz = fread( g_PCSIM_FMKNVM_Storage_au8,
-                             1U,
-                             (size_t)f_Context_ps->storageSize_u32,
-                             ImageFile_ps);
+        readSize_sz = fread(g_PCSIM_FMKNVM_Storage_au8, 1U, (size_t)f_Context_ps->storageSize_u32, ImageFile_ps);
         (void)fclose(ImageFile_ps);
     }
 
@@ -803,15 +732,10 @@ static t_eReturnCode s_PCSIM_FMKNVM_LoadImage(   t_sPCSIM_FMKNVM_Context * f_Con
         else
         {
             size_t writtenSize_sz =
-                fwrite( g_PCSIM_FMKNVM_Storage_au8,
-                        1U,
-                        (size_t)f_Context_ps->storageSize_u32,
-                        ImageFile_ps);
+                fwrite(g_PCSIM_FMKNVM_Storage_au8, 1U, (size_t)f_Context_ps->storageSize_u32, ImageFile_ps);
             int closeResult_s32 = fclose(ImageFile_ps);
 
-            if((writtenSize_sz !=
-                (size_t)f_Context_ps->storageSize_u32) ||
-               (closeResult_s32 != 0))
+            if((writtenSize_sz != (size_t)f_Context_ps->storageSize_u32) || (closeResult_s32 != 0))
             {
                 Ret_e = RC_NVM_BACKEND_READ_ERROR;
             }
@@ -840,8 +764,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_PersistRange(   const t_sPCSIM_FMKNVM_Contex
     }
     else
     {
-        int seekResult_s32 =
-            fseek(ImageFile_ps, (long)f_Address_u32, SEEK_SET);
+        int seekResult_s32 = fseek(ImageFile_ps, (long)f_Address_u32, SEEK_SET);
 
         if(seekResult_s32 != 0)
         {
@@ -850,10 +773,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_PersistRange(   const t_sPCSIM_FMKNVM_Contex
         else
         {
             size_t writtenSize_sz =
-                fwrite( &g_PCSIM_FMKNVM_Storage_au8[f_Address_u32],
-                        1U,
-                        (size_t)f_Size_u32,
-                        ImageFile_ps);
+                fwrite(&g_PCSIM_FMKNVM_Storage_au8[f_Address_u32], 1U, (size_t)f_Size_u32, ImageFile_ps);
 
             if(writtenSize_sz != (size_t)f_Size_u32)
             {
@@ -874,8 +794,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_PersistRange(   const t_sPCSIM_FMKNVM_Contex
         {
             int closeResult_s32 = fclose(ImageFile_ps);
 
-            if((Ret_e == RC_OK) &&
-               (closeResult_s32 != 0))
+            if((Ret_e == RC_OK) && (closeResult_s32 != 0))
             {
                 Ret_e = RC_NVM_BACKEND_PROGRAM_ERROR;
             }
@@ -896,9 +815,7 @@ static t_bool s_PCSIM_FMKNVM_IsRangeValid(   const t_sPCSIM_FMKNVM_Context * f_C
     t_bool isRangeValid_b = FALSE;
 
     //---- 1- Reject empty, overflowing and out-of-component ranges ----//
-    if((f_Size_u32 != 0U) &&
-       (endAddress_u32 >= f_Address_u32) &&
-       (endAddress_u32 <= f_Context_ps->storageSize_u32))
+    if((f_Size_u32 != 0U) && (endAddress_u32 >= f_Address_u32) && (endAddress_u32 <= f_Context_ps->storageSize_u32))
     {
         isRangeValid_b = TRUE;
     }
