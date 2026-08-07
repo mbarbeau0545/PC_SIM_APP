@@ -49,7 +49,7 @@ static t_sPCSIM_FMKNVM_Context g_PCSIM_FMKNVM_Context_s;
  * @param[in] f_Context_pv : Opaque PC simulator backend context.
  * @retval RC_OK The persistent image is ready.
  * @retval RC_ERROR_PTR_NULL The context pointer is null.
- * @retval RC_NVM_BACKEND_READ_ERROR The image could not be loaded.
+ * @retval RC_ERROR_NVM_BACKEND_READ The image could not be loaded.
  */
 static t_eReturnCode s_PCSIM_FMKNVM_Init(void * f_Context_pv);
 /**
@@ -98,7 +98,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_Read(   void * f_Context_pv,
  * @retval RC_OK Bytes and their persistent file were updated.
  * @retval RC_ERROR_PTR_NULL A supplied pointer is null.
  * @retval RC_ERROR_PARAM_INVALID Range or Flash alignment is invalid.
- * @retval RC_NVM_BACKEND_PROGRAM_ERROR Programming or persistence failed.
+ * @retval RC_ERROR_NVM_BACKEND_PROGRAM Programming or persistence failed.
  */
 static t_eReturnCode s_PCSIM_FMKNVM_Program(   void * f_Context_pv,
                                                t_uint32 f_Address_u32,
@@ -112,7 +112,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_Program(   void * f_Context_pv,
  * @retval RC_OK The range contains erased bytes and was persisted.
  * @retval RC_ERROR_PTR_NULL The context pointer is null.
  * @retval RC_ERROR_PARAM_INVALID Range or alignment is invalid.
- * @retval RC_NVM_BACKEND_ERASE_ERROR Persistence failed.
+ * @retval RC_ERROR_NVM_BACKEND_ERASE Persistence failed.
  */
 static t_eReturnCode s_PCSIM_FMKNVM_Erase(void * f_Context_pv, t_uint32 f_Address_u32, t_uint32 f_Size_u32);
 /**
@@ -145,7 +145,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_ConfigureProfile(   t_sPCSIM_FMKNVM_Context 
  * @brief Load the persistent image or create an erased image when absent.
  * @param[in,out] f_Context_ps : Configured simulator context.
  * @retval RC_OK The RAM mirror and image file are synchronized.
- * @retval RC_NVM_BACKEND_READ_ERROR File access failed.
+ * @retval RC_ERROR_NVM_BACKEND_READ File access failed.
  */
 static t_eReturnCode s_PCSIM_FMKNVM_LoadImage(   t_sPCSIM_FMKNVM_Context * f_Context_ps);
 /**
@@ -154,7 +154,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_LoadImage(   t_sPCSIM_FMKNVM_Context * f_Con
  * @param[in] f_Address_u32 : First modified byte.
  * @param[in] f_Size_u32 : Number of modified bytes.
  * @retval RC_OK The range was flushed.
- * @retval RC_NVM_BACKEND_PROGRAM_ERROR File access failed.
+ * @retval RC_ERROR_NVM_BACKEND_PROGRAM File access failed.
  */
 static t_eReturnCode s_PCSIM_FMKNVM_PersistRange(   const t_sPCSIM_FMKNVM_Context * f_Context_ps,
                                                     t_uint32 f_Address_u32,
@@ -186,38 +186,6 @@ static const t_sFMKNVM_BackendApi c_PCSIM_FMKNVM_BackendApi_s =
     .Cyclic_pcb = s_PCSIM_FMKNVM_Cyclic
 };
 
-/// @brief H753 simulation mapping with two 128-KiB slots per partition.
-static const t_sFMKNVM_PartitionStorageCfg c_PCSIM_FMKNVM_H753Storage_as[FMKNVM_PARTITION_NB] =
-{
-    {0U, 262144U, 2U},
-    {262144U, 262144U, 2U},
-    {524288U, 262144U, 2U}
-};
-
-/// @brief G4 simulation mapping with two 4-KiB slots per partition.
-static const t_sFMKNVM_PartitionStorageCfg c_PCSIM_FMKNVM_G4Storage_as[FMKNVM_PARTITION_NB] =
-{
-    {0U, 8192U, 2U},
-    {8192U, 8192U, 2U},
-    {16384U, 8192U, 2U}
-};
-
-/// @brief I2C EEPROM mapping with two 4-KiB slots per partition.
-static const t_sFMKNVM_PartitionStorageCfg c_PCSIM_FMKNVM_I2cStorage_as[FMKNVM_PARTITION_NB] =
-{
-    {0U, 8192U, 2U},
-    {8192U, 8192U, 2U},
-    {16384U, 8192U, 2U}
-};
-
-/// @brief SPI EEPROM mapping with two 8-KiB slots per partition.
-static const t_sFMKNVM_PartitionStorageCfg c_PCSIM_FMKNVM_SpiStorage_as[FMKNVM_PARTITION_NB] =
-{
-    {0U, 16384U, 2U},
-    {16384U, 16384U, 2U},
-    {32768U, 16384U, 2U}
-};
-
 /*********************************
  * FMKNVM_Specific_GetBackendApi
  *********************************/
@@ -225,70 +193,9 @@ const t_sFMKNVM_BackendApi * FMKNVM_Specific_GetBackendApi(void)
 {
     const t_sFMKNVM_BackendApi * BackendApi_ps = &c_PCSIM_FMKNVM_BackendApi_s;
 
-    //---- 1- Inject the PC simulator backend for every supported profile ----//
+    //---- 1- Inject only the simulated physical backend contract ----//
 
     return BackendApi_ps;
-}
-
-/*********************************
- * FMKNVM_Specific_GetPartitionStorage
- *********************************/
-t_eReturnCode FMKNVM_Specific_GetPartitionStorage(   t_eFMKNVM_PartitionId f_PartitionId_e,
-                                                     t_sFMKNVM_PartitionStorageCfg * f_StorageCfg_ps)
-{
-    const t_sFMKNVM_PartitionStorageCfg * StorageTable_pas = NULL;
-    t_eReturnCode Ret_e = RC_OK;
-
-    //---- 1- Validate the destination pointer and partition identifier ----//
-    if(f_StorageCfg_ps == NULL)
-    {
-        Ret_e = RC_ERROR_PTR_NULL;
-    }
-    else if(f_PartitionId_e >= FMKNVM_PARTITION_NB)
-    {
-        Ret_e = RC_ERROR_PARAM_INVALID;
-    }
-    else
-    {
-        //---- 2- Select storage ranges matching the configured profile ----//
-        switch(FMKNVM_EEPROM_TYPE)
-        {
-            case FMKNVM_EEPROM_TYPE_FLASH_H753:
-            {
-                StorageTable_pas = c_PCSIM_FMKNVM_H753Storage_as;
-            }
-            break;
-            case FMKNVM_EEPROM_TYPE_FLASH_G4:
-            {
-                StorageTable_pas = c_PCSIM_FMKNVM_G4Storage_as;
-            }
-            break;
-            case FMKNVM_EEPROM_TYPE_I2C:
-            {
-                StorageTable_pas = c_PCSIM_FMKNVM_I2cStorage_as;
-            }
-            break;
-            case FMKNVM_EEPROM_TYPE_SPI:
-            {
-                StorageTable_pas = c_PCSIM_FMKNVM_SpiStorage_as;
-            }
-            break;
-            case FMKNVM_EEPROM_TYPE_NB:
-            default:
-            {
-                Ret_e = RC_ERROR_NOT_SUPPORTED;
-            }
-            break;
-        }
-
-        if(Ret_e == RC_OK)
-        {
-            //---- 3- Copy the selected mapping into the partition runtime ----//
-            *f_StorageCfg_ps = StorageTable_pas[f_PartitionId_e];
-        }
-    }
-
-    return Ret_e;
 }
 
 /*********************************
@@ -494,7 +401,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_Program(   void * f_Context_pv,
 
                         if(isTransitionValid_b == FALSE)
                         {
-                            Ret_e = RC_NVM_BACKEND_PROGRAM_ERROR;
+                            Ret_e = RC_ERROR_NVM_BACKEND_PROGRAM;
                         }
                         else
                         {
@@ -568,7 +475,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_Erase(void * f_Context_pv, t_uint32 f_Addres
 
             if(Ret_e < RC_OK)
             {
-                Ret_e = RC_NVM_BACKEND_ERASE_ERROR;
+                Ret_e = RC_ERROR_NVM_BACKEND_ERASE;
             }
         }
 
@@ -635,7 +542,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_ConfigureProfile(   t_sPCSIM_FMKNVM_Context 
     {
         case FMKNVM_EEPROM_TYPE_FLASH_H753:
         {
-            f_Context_ps->filePath_pc = "pcsim_fmknvm_h753.bin";
+            f_Context_ps->filePath_pc = "src\\4_PCSIM\\eeprom\\pcsim_fmknvm_h753.bin";
             f_Context_ps->storageSize_u32 = 1048576U;
             f_Context_ps->eraseUnitSize_u32 = PCSIM_FMKNVM_H753_ERASE_SIZE;
             f_Context_ps->programUnitSize_u32 = PCSIM_FMKNVM_H753_PROGRAM_SIZE;
@@ -646,7 +553,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_ConfigureProfile(   t_sPCSIM_FMKNVM_Context 
         break;
         case FMKNVM_EEPROM_TYPE_FLASH_G4:
         {
-            f_Context_ps->filePath_pc = "pcsim_fmknvm_g4.bin";
+            f_Context_ps->filePath_pc = "src\\4_PCSIM\\eeprom\\pcsim_fmknvm_g4.bin";
             f_Context_ps->storageSize_u32 = 24576U;
             f_Context_ps->eraseUnitSize_u32 = PCSIM_FMKNVM_G4_ERASE_SIZE;
             f_Context_ps->programUnitSize_u32 = PCSIM_FMKNVM_G4_PROGRAM_SIZE;
@@ -657,7 +564,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_ConfigureProfile(   t_sPCSIM_FMKNVM_Context 
         break;
         case FMKNVM_EEPROM_TYPE_I2C:
         {
-            f_Context_ps->filePath_pc = "pcsim_fmknvm_i2c.bin";
+            f_Context_ps->filePath_pc = "src\\4_PCSIM\\eeprom\\pcsim_fmknvm_i2c.bin";
             f_Context_ps->storageSize_u32 = 24576U;
             f_Context_ps->eraseUnitSize_u32 = 1U;
             f_Context_ps->programUnitSize_u32 = 1U;
@@ -668,7 +575,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_ConfigureProfile(   t_sPCSIM_FMKNVM_Context 
         break;
         case FMKNVM_EEPROM_TYPE_SPI:
         {
-            f_Context_ps->filePath_pc = "pcsim_fmknvm_spi.bin";
+            f_Context_ps->filePath_pc = "src\\4_PCSIM\\eeprom\\pcsim_fmknvm_spi.bin";
             f_Context_ps->storageSize_u32 = 49152U;
             f_Context_ps->eraseUnitSize_u32 = 1U;
             f_Context_ps->programUnitSize_u32 = 1U;
@@ -727,7 +634,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_LoadImage(   t_sPCSIM_FMKNVM_Context * f_Con
 
         if(ImageFile_ps == NULL)
         {
-            Ret_e = RC_NVM_BACKEND_READ_ERROR;
+            Ret_e = RC_ERROR_NVM_BACKEND_READ;
         }
         else
         {
@@ -737,7 +644,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_LoadImage(   t_sPCSIM_FMKNVM_Context * f_Con
 
             if((writtenSize_sz != (size_t)f_Context_ps->storageSize_u32) || (closeResult_s32 != 0))
             {
-                Ret_e = RC_NVM_BACKEND_READ_ERROR;
+                Ret_e = RC_ERROR_NVM_BACKEND_READ;
             }
         }
     }
@@ -760,7 +667,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_PersistRange(   const t_sPCSIM_FMKNVM_Contex
 
     if(ImageFile_ps == NULL)
     {
-        Ret_e = RC_NVM_BACKEND_PROGRAM_ERROR;
+        Ret_e = RC_ERROR_NVM_BACKEND_PROGRAM;
     }
     else
     {
@@ -768,7 +675,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_PersistRange(   const t_sPCSIM_FMKNVM_Contex
 
         if(seekResult_s32 != 0)
         {
-            Ret_e = RC_NVM_BACKEND_PROGRAM_ERROR;
+            Ret_e = RC_ERROR_NVM_BACKEND_PROGRAM;
         }
         else
         {
@@ -777,7 +684,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_PersistRange(   const t_sPCSIM_FMKNVM_Contex
 
             if(writtenSize_sz != (size_t)f_Size_u32)
             {
-                Ret_e = RC_NVM_BACKEND_PROGRAM_ERROR;
+                Ret_e = RC_ERROR_NVM_BACKEND_PROGRAM;
             }
         }
 
@@ -787,7 +694,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_PersistRange(   const t_sPCSIM_FMKNVM_Contex
 
             if(flushResult_s32 != 0)
             {
-                Ret_e = RC_NVM_BACKEND_PROGRAM_ERROR;
+                Ret_e = RC_ERROR_NVM_BACKEND_PROGRAM;
             }
         }
 
@@ -796,7 +703,7 @@ static t_eReturnCode s_PCSIM_FMKNVM_PersistRange(   const t_sPCSIM_FMKNVM_Contex
 
             if((Ret_e == RC_OK) && (closeResult_s32 != 0))
             {
-                Ret_e = RC_NVM_BACKEND_PROGRAM_ERROR;
+                Ret_e = RC_ERROR_NVM_BACKEND_PROGRAM;
             }
         }
     }

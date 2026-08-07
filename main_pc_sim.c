@@ -945,7 +945,7 @@ int main(int argc, char **argv)
     if (s_socketInit(&serverSock, opt_s.udpPort_u16) != 0)
     {
         printf("PCSIM: failed to start UDP server on 127.0.0.1:%u\n", opt_s.udpPort_u16);
-        return 1;
+            return 1;
     }
 
     printf("PCSIM: UDP command server ready on 127.0.0.1:%u\n", opt_s.udpPort_u16);
