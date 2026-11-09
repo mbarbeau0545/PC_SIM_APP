@@ -285,7 +285,10 @@ t_eReturnCode FMKCPU_Init(void)
 
     return RC_OK;
 }
-t_eReturnCode FMKCPU_Cyclic(void) { return RC_OK; }
+t_eReturnCode FMKCPU_Cyclic(void) 
+{ 
+    return RC_OK; 
+}
 
 t_eReturnCode FMKCPU_GetState(t_eCyclicModState *f_State_pe)
 {

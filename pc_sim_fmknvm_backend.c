@@ -7,7 +7,7 @@
 
 #include "Library/SafeMem/SafeMem.h"
 #include "FMK_CFG/FMKCFG_ConfigFiles/FMKNVM_ConfigPrivate.h"
-#include "FMK_CFG/FMKCFG_ConfigSpecific/FMKNVM_ConfigSpecific.h"
+#include "FMK_CFG/FMKCFG_ConfigSpecific/FmkNvmConfigSpecific/FMKNVM_ConfigSpecific.h"
 
 /// @brief Maximum simulated storage capacity in bytes.
 #define PCSIM_FMKNVM_STORAGE_MAX_SIZE ((t_uint32)1048576U)
@@ -587,7 +587,13 @@ static t_eReturnCode s_PCSIM_FMKNVM_ConfigureProfile(   t_sPCSIM_FMKNVM_Context 
         case FMKNVM_EEPROM_TYPE_NB:
         default:
         {
-            Ret_e = RC_ERROR_NOT_SUPPORTED;
+            f_Context_ps->filePath_pc = "src\\4_PCSIM\\eeprom\\pcsim_fmknvm_unknown.bin";
+            f_Context_ps->storageSize_u32 = 1048576U;
+            f_Context_ps->eraseUnitSize_u32 = 1U;
+            f_Context_ps->programUnitSize_u32 = 1U;
+            f_Context_ps->commitUnitSize_u32 = 1U;
+            f_Context_ps->pageSize_u32 = PCSIM_FMKNVM_SPI_PAGE_SIZE;
+            f_Context_ps->eraseRequired_b = FALSE;
         }
         break;
     }
